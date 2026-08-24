@@ -11,14 +11,14 @@
     {
       "binding": "DB",
       "database_name": "refinery-db",
-      "database_id": "refinery-local-db",
+      "database_id": "22797bb3-f76d-45b4-ad5c-828ccb749ab0",
       "migrations_dir": "migrations"
     }
   ],
   "kv_namespaces": [
     {
       "binding": "KV_CACHE",
-      "id": "refinery-kv-cache"
+      "id": "0b1744cb7e23435088e43fdc1648647a"
     }
   ],
   "vectorize": [

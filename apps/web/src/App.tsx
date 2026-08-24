@@ -41,6 +41,8 @@ interface RefinedEntity {
   createdAt: string;
 }
 
+const API_BASE = import.meta.env.DEV ? "" : "https://data-refinery-worker.juanquy.workers.dev";
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "playground" | "mcp">("diffs");
   const [loading, setLoading] = useState(false);
@@ -72,35 +74,35 @@ export default function App() {
     setLoading(true);
     try {
       // Diffs
-      const diffRes = await fetch("/api/v1/diffs");
+      const diffRes = await fetch(`${API_BASE}/api/v1/diffs`);
       if (diffRes.ok) {
         const d = await diffRes.json();
         setDiffs(d.diffs || []);
       }
 
       // Dev
-      const devRes = await fetch("/api/v1/dev");
+      const devRes = await fetch(`${API_BASE}/api/v1/dev`);
       if (devRes.ok) {
         const d = await devRes.json();
         setDevItems(d.items || []);
       }
 
       // Pricing
-      const pricingRes = await fetch("/api/v1/pricing");
+      const pricingRes = await fetch(`${API_BASE}/api/v1/pricing`);
       if (pricingRes.ok) {
         const d = await pricingRes.json();
         setPricingItems(d.items || []);
       }
 
       // Regulatory
-      const regRes = await fetch("/api/v1/regulatory");
+      const regRes = await fetch(`${API_BASE}/api/v1/regulatory`);
       if (regRes.ok) {
         const d = await regRes.json();
         setRegulatoryItems(d.items || []);
       }
 
       // Stats
-      const statsRes = await fetch("/api/v1/stats");
+      const statsRes = await fetch(`${API_BASE}/api/v1/stats`);
       if (statsRes.ok) {
         const d = await statsRes.json();
         if (d.counts) setStats(d.counts);
@@ -122,7 +124,7 @@ export default function App() {
     setRefineResult(null);
 
     try {
-      const res = await fetch("/api/v1/custom/refine", {
+      const res = await fetch(`${API_BASE}/api/v1/custom/refine`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -145,7 +147,7 @@ export default function App() {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     try {
-      const res = await fetch(`/api/v1/search?q=${encodeURIComponent(searchQuery)}`);
+      const res = await fetch(`${API_BASE}/api/v1/search?q=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
       setSearchResults(data);
     } catch (err) {
@@ -157,7 +159,7 @@ export default function App() {
     const config = {
       mcpServers: {
         "data-refinery": {
-          url: "http://localhost:8787/mcp"
+          url: "https://data-refinery-worker.juanquy.workers.dev/mcp"
         }
       }
     };
@@ -847,7 +849,7 @@ export default function App() {
 {`{
   "mcpServers": {
     "data-refinery": {
-      "url": "http://localhost:8787/mcp"
+      "url": "https://data-refinery-worker.juanquy.workers.dev/mcp"
     }
   }
 }`}
@@ -890,10 +892,10 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 gap-4">
           <div>Universal Data Refinery • Built with Cloudflare Workers AI, D1 SQL, and Model Context Protocol</div>
           <div className="flex items-center gap-4">
-            <a href="/mcp/manifest" target="_blank" rel="noreferrer" className="hover:text-slate-300 flex items-center gap-1">
+            <a href="https://data-refinery-worker.juanquy.workers.dev/mcp/manifest" target="_blank" rel="noreferrer" className="hover:text-slate-300 flex items-center gap-1">
               MCP Manifest <ExternalLink className="w-3 h-3" />
             </a>
-            <a href="/api/v1/dev" target="_blank" rel="noreferrer" className="hover:text-slate-300 flex items-center gap-1">
+            <a href="https://data-refinery-worker.juanquy.workers.dev/api/v1/dev" target="_blank" rel="noreferrer" className="hover:text-slate-300 flex items-center gap-1">
               REST Endpoints <ExternalLink className="w-3 h-3" />
             </a>
           </div>
