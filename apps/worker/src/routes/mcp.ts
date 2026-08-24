@@ -67,6 +67,56 @@ mcpRouter.post("/", async (c) => {
     });
   }
 
+  // Handle resources/list
+  if (method === "resources/list") {
+    return c.json({
+      jsonrpc: "2.0",
+      id,
+      result: {
+        resources: [
+          {
+            uri: "refinery://developer/breaking-changes",
+            name: "Developer Breaking Changes Feed",
+            description: "Live database of API deprecations, symbol removals, and migration diffs",
+            mimeType: "application/json"
+          },
+          {
+            uri: "refinery://pricing/b2b-matrix",
+            name: "B2B SaaS Pricing Matrices",
+            description: "Normalized SaaS pricing tiers, limits, and overage rates",
+            mimeType: "application/json"
+          },
+          {
+            uri: "refinery://regulatory/municipal-rules",
+            name: "Localized Regulatory & Permits",
+            description: "Municipal ordinances, permits, penalties, and compliance checklists",
+            mimeType: "application/json"
+          }
+        ]
+      }
+    });
+  }
+
+  // Handle prompts/list
+  if (method === "prompts/list") {
+    return c.json({
+      jsonrpc: "2.0",
+      id,
+      result: {
+        prompts: [
+          {
+            name: "check_sdk_upgrade",
+            description: "Check if upgrading an SDK will break your code",
+            arguments: [
+              { name: "package", description: "Package name", required: true },
+              { name: "targetVersion", description: "Target version", required: false }
+            ]
+          }
+        ]
+      }
+    });
+  }
+
   // Handle tools/call
   if (method === "tools/call") {
     const { name, arguments: args } = params || {};
