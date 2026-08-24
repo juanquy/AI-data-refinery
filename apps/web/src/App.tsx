@@ -269,13 +269,21 @@ export default function App() {
           </div>
 
           {/* Quick Stats & Controls */}
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setActiveTab("billing")}
+              className="flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Get Pro API Key ($49/mo)</span>
+            </button>
+
+            <div className="hidden lg:flex items-center gap-2 text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">
               <span className="flex h-2 w-2 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span>Workers AI Edge: Active</span>
+              <span>Workers AI: Active</span>
             </div>
 
             <button
