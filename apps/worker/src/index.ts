@@ -9,6 +9,7 @@ import { customRouter } from "./routes/custom";
 import { searchRouter } from "./routes/search";
 import { mcpRouter } from "./routes/mcp";
 import { billingRouter } from "./routes/billing";
+import { promotionRouter } from "./routes/promotions";
 import { listRecentDiffs, listEntitiesByDomain } from "./lib/db";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -80,6 +81,7 @@ app.route("/api/v1/regulatory", regulatoryRouter);
 app.route("/api/v1/custom", customRouter);
 app.route("/api/v1/search", searchRouter);
 app.route("/api/v1/billing", billingRouter);
+app.route("/api/v1/promotions", promotionRouter);
 app.route("/mcp", mcpRouter);
 
 export default {

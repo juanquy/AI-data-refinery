@@ -26,7 +26,10 @@ import {
   CheckSquare,
   CreditCard,
   Key,
-  ShieldCheck
+  ShieldCheck,
+  Megaphone,
+  Share2,
+  Rss
 } from "lucide-react";
 
 interface DiffItem {
@@ -52,7 +55,7 @@ interface RefinedEntity {
 const API_BASE = import.meta.env.DEV ? "" : "https://data-refinery-worker.juanquy.workers.dev";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "playground" | "mcp" | "help" | "billing">("diffs");
+  const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "playground" | "mcp" | "help" | "billing" | "marketing">("diffs");
   const [loading, setLoading] = useState(false);
   const [diffs, setDiffs] = useState<DiffItem[]>([]);
   const [devItems, setDevItems] = useState<RefinedEntity[]>([]);
@@ -242,6 +245,30 @@ export default function App() {
     navigator.clipboard.writeText(key);
     setCopiedKey(true);
     setTimeout(() => setCopiedKey(false), 2000);
+  };
+
+  // Marketing campaign state
+  const [campaignData, setCampaignData] = useState<any>(null);
+  const [campaignLoading, setCampaignLoading] = useState(false);
+  const [copiedMarketingKey, setCopiedMarketingKey] = useState<string | null>(null);
+
+  const handleGenerateCampaign = async () => {
+    setCampaignLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/promotions/drafts`);
+      const data = await res.json();
+      setCampaignData(data.campaign);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCampaignLoading(false);
+    }
+  };
+
+  const copyMarketingText = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMarketingKey(id);
+    setTimeout(() => setCopiedMarketingKey(null), 2000);
   };
 
   return (
@@ -500,6 +527,18 @@ export default function App() {
           >
             <CreditCard className="w-4 h-4 text-emerald-400" />
             💎 Pricing & API Keys
+          </button>
+
+          <button
+            onClick={() => setActiveTab("marketing")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === "marketing"
+                ? "bg-gradient-to-r from-pink-500 to-rose-600 text-white shadow-lg shadow-pink-500/20"
+                : "bg-slate-900/60 text-pink-400 hover:text-pink-300 hover:bg-slate-800 border border-pink-500/20"
+            }`}
+          >
+            <Megaphone className="w-4 h-4" />
+            📢 Auto-Promotions
           </button>
         </div>
 
@@ -1364,6 +1403,181 @@ export default function App() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* TAB 9: AUTO-MARKETING & CAMPAIGN GENERATOR */}
+        {activeTab === "marketing" && (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h2 className="text-xl font-black text-white flex items-center gap-2.5">
+                  <Megaphone className="w-5 h-5 text-pink-400" />
+                  Autonomous Promotional Campaign Engine
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Turn your live database intelligence and breaking change diffs into viral marketing posts, tweets, and automated RSS broadcasts.
+                </p>
+              </div>
+
+              <button
+                onClick={handleGenerateCampaign}
+                disabled={campaignLoading}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white font-extrabold text-xs shadow-lg shadow-pink-500/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {campaignLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Generating with Workers AI...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    Generate Fresh AI Campaign
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Auto-Sync RSS Broadcast Card */}
+            <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5 text-sm font-bold text-white">
+                  <Rss className="w-4 h-4 text-orange-400" />
+                  <span>Automated 24/7 Social Broadcasting RSS Feed</span>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                  Buffer & Zapier Ready
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300">
+                Plug this live RSS link into free tools like <strong>Buffer</strong>, <strong>Zapier</strong>, or <strong>Make.com</strong>. Whenever your refinery detects an API breaking change or pricing update, it automatically creates a post on your Twitter/X, LinkedIn, or Discord!
+              </p>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  readOnly
+                  value="https://data-refinery-worker.juanquy.workers.dev/api/v1/promotions/feed.rss"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs font-mono text-orange-300 select-all focus:outline-none"
+                />
+                <button
+                  onClick={() => copyMarketingText("https://data-refinery-worker.juanquy.workers.dev/api/v1/promotions/feed.rss", "rss-feed")}
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-colors flex-shrink-0"
+                >
+                  {copiedMarketingKey === "rss-feed" ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  {copiedMarketingKey === "rss-feed" ? "Copied!" : "Copy RSS Link"}
+                </button>
+              </div>
+            </div>
+
+            {/* Generated Campaign Sections */}
+            {campaignData ? (
+              <div className="space-y-6">
+                {/* 1. Viral Tweets */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Share2 className="w-4 h-4 text-blue-400" />
+                    Ready-to-Post Twitter / X Posts & Threads
+                  </h3>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {campaignData.tweets?.map((tweet: any, idx: number) => {
+                      const fullTweet = `${tweet.hook}\n\n${tweet.tweetText}\n\n${tweet.hashtags?.join(" ") || ""}`;
+                      const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(fullTweet)}`;
+                      return (
+                        <div key={idx} className="bg-slate-950/80 border border-slate-800 rounded-xl p-5 space-y-3 flex flex-col justify-between">
+                          <div className="space-y-2">
+                            <div className="text-xs font-bold text-blue-400 font-mono">Hook: &ldquo;{tweet.hook}&rdquo;</div>
+                            <p className="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">{tweet.tweetText}</p>
+                            {tweet.hashtags && (
+                              <div className="text-[11px] text-slate-500 font-mono">{tweet.hashtags.join(" ")}</div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-2 border-t border-slate-900">
+                            <a
+                              href={tweetUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors"
+                            >
+                              Post on X <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <button
+                              onClick={() => copyMarketingText(fullTweet, `tweet-${idx}`)}
+                              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs flex items-center gap-1.5 transition-colors"
+                            >
+                              {copiedMarketingKey === `tweet-${idx}` ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                              {copiedMarketingKey === `tweet-${idx}` ? "Copied!" : "Copy Tweet"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Reddit Posts */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Share2 className="w-4 h-4 text-orange-400" />
+                    Targeted Reddit Community Discussions
+                  </h3>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {campaignData.redditPosts?.map((post: any, idx: number) => (
+                      <div key={idx} className="bg-slate-950/80 border border-slate-800 rounded-xl p-5 space-y-3 flex flex-col justify-between">
+                        <div className="space-y-2">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                            {post.targetSubreddit}
+                          </span>
+                          <h4 className="text-xs font-bold text-white">{post.title}</h4>
+                          <p className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">{post.postBody}</p>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-900">
+                          <button
+                            onClick={() => copyMarketingText(`${post.title}\n\n${post.postBody}`, `reddit-${idx}`)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs flex items-center gap-1.5 transition-colors"
+                          >
+                            {copiedMarketingKey === `reddit-${idx}` ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copiedMarketingKey === `reddit-${idx}` ? "Copied Post!" : "Copy Reddit Post"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Hacker News */}
+                {campaignData.hackerNews && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-bold text-white">Hacker News &ldquo;Show HN&rdquo; Launch Template</h3>
+                    <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-5 space-y-3">
+                      <div className="font-bold text-xs text-amber-400">Title: {campaignData.hackerNews.title}</div>
+                      <p className="text-xs text-slate-300 leading-relaxed">{campaignData.hackerNews.discussionStarter}</p>
+                      <button
+                        onClick={() => copyMarketingText(`${campaignData.hackerNews.title}\n\n${campaignData.hackerNews.discussionStarter}\n\nhttps://drefinery.freshbeats.ai`, "hn")}
+                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs flex items-center gap-1.5 transition-colors"
+                      >
+                        {copiedMarketingKey === "hn" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedMarketingKey === "hn" ? "Copied HN Post!" : "Copy HN Text"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-[#0f172a] border border-slate-800 rounded-xl p-10 text-center space-y-3">
+                <Sparkles className="w-8 h-8 text-pink-400 mx-auto" />
+                <h3 className="text-sm font-bold text-white">Generate Your First Automated Campaign</h3>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Click the button above to let Workers AI analyze your database and draft viral tweets, Reddit discussions, and Show HN posts automatically.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </main>
