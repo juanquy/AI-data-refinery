@@ -21,9 +21,44 @@ app.use(
   cors({
     origin: "*",
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "X-Custom-Auth"]
+    allowHeaders: ["Content-Type", "Authorization", "X-Refinery-Key", "X-Custom-Auth"]
   })
 );
+
+// Agent Quota & HTTP 402 Payment Required Middleware
+app.use("/api/v1/dev/*", async (c, next) => {
+  const apiKey = c.req.header("X-Refinery-Key") || c.req.header("Authorization")?.replace("Bearer ", "");
+  if (apiKey) {
+    const record: any = await c.env.DB.prepare(
+      "SELECT * FROM api_keys WHERE key_value = ? AND status = 'ACTIVE' LIMIT 1"
+    ).bind(apiKey).first();
+
+    if (!record) {
+      return c.json({
+        error: "Invalid or inactive API Key",
+        status: 402,
+        message: "Payment Required. Subscribe at https://drefinery.freshbeats.ai",
+        checkoutUrl: "https://data-refinery-worker.juanquy.workers.dev/api/v1/billing/create-checkout"
+      }, 402);
+    }
+
+    if (record.current_usage >= record.monthly_quota) {
+      return c.json({
+        error: "Monthly quota exceeded",
+        status: 402,
+        message: "Payment Required: Your 10,000 monthly quota has been exhausted. Upgrade plan at https://drefinery.freshbeats.ai",
+        currentUsage: record.current_usage,
+        monthlyQuota: record.monthly_quota
+      }, 402);
+    }
+
+    // Increment usage asynchronously
+    c.executionCtx.waitUntil(
+      c.env.DB.prepare("UPDATE api_keys SET current_usage = current_usage + 1 WHERE id = ?").bind(record.id).run()
+    );
+  }
+  await next();
+});
 
 // Health & System Info
 app.get("/", (c) => {
