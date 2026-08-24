@@ -275,7 +275,7 @@ export default function App() {
     <div className="min-h-screen bg-[#080d18] text-slate-100 flex flex-col selection:bg-orange-500 selection:text-white">
       {/* Top Navbar */}
       <header className="border-b border-slate-800/80 bg-[#0d1424]/90 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-[96%] xl:max-w-[1550px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img
               src="/logo.png"
@@ -326,7 +326,7 @@ export default function App() {
       </header>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
+      <main className="max-w-[96%] xl:max-w-[1550px] mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-6">
         
         {/* Metric Badges Banner */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -432,7 +432,7 @@ export default function App() {
         )}
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
           <button
             onClick={() => setActiveTab("diffs")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
