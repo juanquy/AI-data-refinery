@@ -1,0 +1,22 @@
+{
+  "name": "@data-refinery/worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply refinery-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply refinery-db --remote",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@data-refinery/schema": "*",
+    "hono": "^4.7.2",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250224.0",
+    "typescript": "^5.8.2",
+    "wrangler": "^3.111.0"
+  }
+}

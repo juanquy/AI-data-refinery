@@ -1,0 +1,32 @@
+{
+  "name": "data-refinery",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Universal Data Refinery - AI-powered structured data extraction, semantic diffing, and MCP server on Cloudflare Workers",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/worker",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:all": "concurrently \"npm run dev:worker\" \"npm run dev:web\"",
+    "dev:worker": "npm run dev --workspace=apps/worker",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspace=apps/worker"
+  },
+  "keywords": [
+    "cloudflare-workers",
+    "workers-ai",
+    "mcp",
+    "data-refinery",
+    "vectorize",
+    "d1"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.2"
+  }
+}
