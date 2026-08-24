@@ -23,7 +23,10 @@ import {
   BookOpen,
   Workflow,
   Lightbulb,
-  CheckSquare
+  CheckSquare,
+  CreditCard,
+  Key,
+  ShieldCheck
 } from "lucide-react";
 
 interface DiffItem {
@@ -49,7 +52,7 @@ interface RefinedEntity {
 const API_BASE = import.meta.env.DEV ? "" : "https://data-refinery-worker.juanquy.workers.dev";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "playground" | "mcp" | "help">("diffs");
+  const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "playground" | "mcp" | "help" | "billing">("diffs");
   const [loading, setLoading] = useState(false);
   const [diffs, setDiffs] = useState<DiffItem[]>([]);
   const [devItems, setDevItems] = useState<RefinedEntity[]>([]);
@@ -74,10 +77,33 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any>(null);
 
-  // Fetch initial data
+  // Billing & Stripe state
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [purchasedKey, setPurchasedKey] = useState<string | null>(null);
+  const [purchasedPlan, setPurchasedPlan] = useState<string | null>(null);
+  const [keyToCheck, setKeyToCheck] = useState("");
+  const [keyInspectResult, setKeyInspectResult] = useState<any>(null);
+  const [checkingKey, setCheckingKey] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+
+  // Fetch initial data & handle checkout success redirect
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Check for Stripe Checkout return
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get("session_id");
+      if (sessionId) {
+        setActiveTab("billing");
+        const keyRes = await fetch(`${API_BASE}/api/v1/billing/session-key?session_id=${sessionId}`);
+        if (keyRes.ok) {
+          const keyData = await keyRes.json();
+          if (keyData.apiKey) {
+            setPurchasedKey(keyData.apiKey);
+            setPurchasedPlan(keyData.plan || "PRO");
+          }
+        }
+      }
       // Diffs
       const diffRes = await fetch(`${API_BASE}/api/v1/diffs`);
       if (diffRes.ok) {
@@ -171,6 +197,51 @@ export default function App() {
     navigator.clipboard.writeText(JSON.stringify(config, null, 2));
     setCopiedMcp(true);
     setTimeout(() => setCopiedMcp(false), 2000);
+  };
+
+  const handleSubscribePro = async () => {
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/billing/create-checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin: window.location.origin
+        })
+      });
+      const data = await res.json();
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        alert("Failed to create Stripe Checkout session: " + (data.error || "Unknown error"));
+      }
+    } catch (err: any) {
+      alert("Error contacting billing server: " + err.message);
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const handleCheckKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!keyToCheck.trim()) return;
+    setCheckingKey(true);
+    setKeyInspectResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/billing/verify-key?key=${encodeURIComponent(keyToCheck.trim())}`);
+      const data = await res.json();
+      setKeyInspectResult(data);
+    } catch (err: any) {
+      setKeyInspectResult({ valid: false, message: err.message });
+    } finally {
+      setCheckingKey(false);
+    }
+  };
+
+  const copyApiKeyToClipboard = (key: string) => {
+    navigator.clipboard.writeText(key);
+    setCopiedKey(true);
+    setTimeout(() => setCopiedKey(false), 2000);
   };
 
   return (
@@ -409,6 +480,18 @@ export default function App() {
           >
             <HelpCircle className="w-4 h-4" />
             📖 User & MCP Guide
+          </button>
+
+          <button
+            onClick={() => setActiveTab("billing")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === "billing"
+                ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20"
+                : "bg-slate-900/60 text-emerald-400 hover:text-emerald-300 hover:bg-slate-800 border border-emerald-500/20"
+            }`}
+          >
+            <CreditCard className="w-4 h-4 text-emerald-400" />
+            💎 Pricing & API Keys
           </button>
         </div>
 
@@ -1032,6 +1115,246 @@ export default function App() {
                   </code>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 8: STRIPE BILLING & API KEYS */}
+        {activeTab === "billing" && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-xl font-black text-white flex items-center gap-2.5">
+                <CreditCard className="w-5 h-5 text-emerald-400" />
+                Data Refinery Pricing & API Key Management
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Fuel your autonomous agents with enterprise-grade edge intelligence. Subscriptions powered securely by Stripe.
+              </p>
+            </div>
+
+            {/* Success Key Banner if user just completed checkout */}
+            {purchasedKey && (
+              <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-emerald-950/80 border-2 border-emerald-500 rounded-2xl p-6 space-y-4 shadow-xl shadow-emerald-500/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 text-emerald-400 font-bold text-sm">
+                    <ShieldCheck className="w-5 h-5" />
+                    <span>Payment Successful! Your {purchasedPlan} API Key is Live:</span>
+                  </div>
+                  <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">
+                    10,000 Quota / mo
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    readOnly
+                    value={purchasedKey}
+                    className="w-full bg-slate-950 border border-emerald-500/50 rounded-xl px-4 py-3 text-sm font-mono text-emerald-300 select-all focus:outline-none"
+                  />
+                  <button
+                    onClick={() => copyApiKeyToClipboard(purchasedKey)}
+                    className="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs flex items-center gap-2 transition-all flex-shrink-0"
+                  >
+                    {copiedKey ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copiedKey ? "Copied Key!" : "Copy Key"}
+                  </button>
+                </div>
+
+                <p className="text-xs text-slate-300">
+                  Pass this key in your requests via header: <code className="text-emerald-400 font-mono">X-Refinery-Key: {purchasedKey}</code> or in your MCP headers configuration.
+                </p>
+              </div>
+            )}
+
+            {/* Pricing Tier Cards */}
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Free Tier */}
+              <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-200">Hobby / Starter</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                      Free
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-3xl font-black text-white">$0</span>
+                    <span className="text-xs text-slate-400"> / forever</span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Great for developers exploring the data refinery locally or testing MCP tool calls.
+                  </p>
+                  <div className="space-y-2 text-xs pt-2">
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <Check className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span>50 free queries / day</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <Check className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span>Public Dev, Pricing & Municipal feeds</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <Check className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span>Standard MCP & REST access</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  disabled
+                  className="w-full py-2.5 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs cursor-default"
+                >
+                  Current Free Tier
+                </button>
+              </div>
+
+              {/* Pro Tier (Stripe Checkout) */}
+              <div className="bg-gradient-to-b from-[#131d36] to-[#0f172a] border-2 border-emerald-500/60 rounded-2xl p-6 flex flex-col justify-between space-y-6 relative shadow-xl shadow-emerald-500/10">
+                <div className="absolute -top-3 right-6">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md">
+                    Recommended
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-white">Data Refinery Pro</span>
+                  </div>
+                  <div>
+                    <span className="text-4xl font-black text-white">$49</span>
+                    <span className="text-xs text-slate-300"> / month</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    For AI startups, agent developers, and teams requiring high-frequency, verified machine fuel.
+                  </p>
+                  <div className="space-y-2.5 text-xs pt-2">
+                    <div className="flex items-center gap-2 text-slate-200 font-medium">
+                      <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <span><strong>10,000 refined queries</strong> / month</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-200">
+                      <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <span>Priority Cloudflare Workers AI edge execution</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-200">
+                      <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <span>Live breaking changes & pricing increase diffs</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-200">
+                      <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <span>On-demand URL refinement & custom schemas</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-200">
+                      <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <span>Multi-agent MCP concurrency support</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSubscribePro}
+                  disabled={checkoutLoading}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all"
+                >
+                  {checkoutLoading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Connecting to Stripe...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4" />
+                      Subscribe with Stripe ($49/mo)
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Enterprise Tier */}
+              <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-200">Enterprise PaaS</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                      Custom
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-3xl font-black text-white">$299+</span>
+                    <span className="text-xs text-slate-400"> / month</span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Custom data refineries deployed to your enterprise Cloudflare zone with custom schemas.
+                  </p>
+                  <div className="space-y-2 text-xs pt-2">
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <Check className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                      <span>100,000+ queries / month</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <Check className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                      <span>Dedicated private D1 SQL & Vectorize index</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <Check className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                      <span>Custom webhooks & SLA uptime guarantee</span>
+                    </div>
+                  </div>
+                </div>
+
+                <a
+                  href="mailto:support@freshbeats.ai?subject=Enterprise%20Data%20Refinery%20Inquiry"
+                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs text-center block transition-colors"
+                >
+                  Contact Enterprise Sales
+                </a>
+              </div>
+            </div>
+
+            {/* API Key Quota Inspector */}
+            <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-white">
+                <Key className="w-4 h-4 text-emerald-400" />
+                <span>Verify Existing API Key & Check Remaining Quota</span>
+              </div>
+
+              <form onSubmit={handleCheckKey} className="flex gap-3">
+                <input
+                  type="text"
+                  required
+                  placeholder="Paste your API key (e.g., rf_live_... or rf_test_...)"
+                  value={keyToCheck}
+                  onChange={(e) => setKeyToCheck(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                />
+                <button
+                  type="submit"
+                  disabled={checkingKey}
+                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition-colors disabled:opacity-50"
+                >
+                  {checkingKey ? "Checking..." : "Inspect Key"}
+                </button>
+              </form>
+
+              {keyInspectResult && (
+                <div className={`p-4 rounded-xl text-xs space-y-2 border ${
+                  keyInspectResult.valid ? "bg-emerald-950/20 border-emerald-800/40 text-emerald-300" : "bg-red-950/20 border-red-800/40 text-red-300"
+                }`}>
+                  <div className="font-bold flex items-center gap-2">
+                    {keyInspectResult.valid ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                    <span>{keyInspectResult.valid ? "Valid Active API Key" : "Invalid Key"}</span>
+                  </div>
+                  {keyInspectResult.valid && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1 text-slate-200">
+                      <div><span className="text-slate-400">Plan:</span> <strong className="text-white">{keyInspectResult.plan}</strong></div>
+                      <div><span className="text-slate-400">Remaining:</span> <strong className="text-emerald-400">{keyInspectResult.remainingQueries} queries</strong></div>
+                      <div><span className="text-slate-400">Monthly Quota:</span> {keyInspectResult.monthlyQuota}</div>
+                      <div><span className="text-slate-400">Email:</span> {keyInspectResult.userEmail}</div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -5,6 +5,9 @@ export interface Env {
   VECTOR_INDEX?: VectorizeIndex;
   ENVIRONMENT?: string;
   AUTH_TOKEN?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_PRO_PRICE_ID?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
 }
 
 export interface RefineJobResult<T = any> {

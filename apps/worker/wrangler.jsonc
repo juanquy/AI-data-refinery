@@ -7,6 +7,9 @@
   "ai": {
     "binding": "AI"
   },
+  "vars": {
+    "STRIPE_PRO_PRICE_ID": "price_1U7oWJ2aItc9d3fFL5KoOsLv"
+  },
   "d1_databases": [
     {
       "binding": "DB",
