@@ -18,7 +18,12 @@ import {
   Terminal,
   Activity,
   Zap,
-  Globe
+  Globe,
+  HelpCircle,
+  BookOpen,
+  Workflow,
+  Lightbulb,
+  CheckSquare
 } from "lucide-react";
 
 interface DiffItem {
@@ -44,7 +49,7 @@ interface RefinedEntity {
 const API_BASE = import.meta.env.DEV ? "" : "https://data-refinery-worker.juanquy.workers.dev";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "playground" | "mcp">("diffs");
+  const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "playground" | "mcp" | "help">("diffs");
   const [loading, setLoading] = useState(false);
   const [diffs, setDiffs] = useState<DiffItem[]>([]);
   const [devItems, setDevItems] = useState<RefinedEntity[]>([]);
@@ -391,7 +396,19 @@ export default function App() {
             }`}
           >
             <Terminal className="w-4 h-4" />
-            🤖 Agent MCP Connect
+            Agent MCP Connect
+          </button>
+
+          <button
+            onClick={() => setActiveTab("help")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === "help"
+                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+                : "bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+            }`}
+          >
+            <HelpCircle className="w-4 h-4" />
+            📖 User & MCP Guide
           </button>
         </div>
 
@@ -880,6 +897,139 @@ export default function App() {
                     <div className="font-mono font-bold text-amber-400">refinery_refine_custom_url</div>
                     <div className="text-slate-400 text-[11px] mt-0.5">On-demand extraction and sanitization for any target URL.</div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 7: USER & MCP GUIDE (HELP PAGE) */}
+        {activeTab === "help" && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-xl font-black text-white flex items-center gap-2.5">
+                <BookOpen className="w-5 h-5 text-indigo-400" />
+                Universal Data Refinery User & MCP Guide
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Everything you need to know about the Refinery Studio, Autonomous AI Fuel, and Model Context Protocol (MCP) integration.
+              </p>
+            </div>
+
+            {/* Section 1: The Core Philosophy */}
+            <div className="bg-[#0f172a] border border-slate-800 rounded-xl p-6 space-y-4">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Workflow className="w-4 h-4 text-orange-400" />
+                1. What is the Data Refinery?
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                The internet was built for human eyes with HTML, styling, ads, and navigation menus. When autonomous AI agents (like Antigravity, Claude, or Cursor) browse web pages, raw HTML causes heavy token waste, parsing lag, and frequent hallucinations.
+              </p>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                The <strong>Universal Data Refinery</strong> runs at the edge on Cloudflare Workers AI. It ingests messy web documents, extracts verified facts into strict JSON schemas, calculates semantic version diffs, and serves the result as instant <em>&ldquo;machine fuel&rdquo;</em> via REST and MCP.
+              </p>
+
+              <div className="grid md:grid-cols-3 gap-4 pt-2">
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 text-xs space-y-1.5">
+                  <div className="font-bold text-orange-400">⚡ Ingest & Sanitize</div>
+                  <p className="text-slate-400">HTML boilerplate, ads, and scripts are stripped into token-dense markdown.</p>
+                </div>
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 text-xs space-y-1.5">
+                  <div className="font-bold text-purple-400">🧠 Workers AI Extraction</div>
+                  <p className="text-slate-400">Llama 3.3 models structure the raw text into deterministic, typed JSON.</p>
+                </div>
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 text-xs space-y-1.5">
+                  <div className="font-bold text-emerald-400">📊 Delta Diffing & Indexing</div>
+                  <p className="text-slate-400">Automatic diffing flags critical changes and saves to D1 SQL & Vectorize.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: How to Use the Studio Dashboard */}
+            <div className="bg-[#0f172a] border border-slate-800 rounded-xl p-6 space-y-5">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Layers className="w-4 h-4 text-blue-400" />
+                2. How to Use the Studio Dashboard
+              </h3>
+
+              <div className="grid md:grid-cols-2 gap-4 text-xs">
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
+                  <div className="font-bold text-white flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-orange-400" />
+                    Live Diffs & Alerts Feed
+                  </div>
+                  <p className="text-slate-300">
+                    Whenever an existing entity is re-refined with new updates, the system computes the exact semantic difference and flags its severity (<strong>CRITICAL</strong>, <strong>MAJOR</strong>, or <strong>MINOR</strong>).
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
+                  <div className="font-bold text-white flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-amber-400" />
+                    Universal On-Demand Refiner
+                  </div>
+                  <p className="text-slate-300">
+                    Paste any live URL into the playground, specify your prompt, and click <strong>&ldquo;Refine Web Content&rdquo;</strong>. Cloudflare Workers AI will process the page live and store the structured result in D1 SQL.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
+                  <div className="font-bold text-white flex items-center gap-2">
+                    <Code2 className="w-4 h-4 text-blue-400" />
+                    Dev Breaking Changes Explorer
+                  </div>
+                  <p className="text-slate-300">
+                    Explore major package upgrades, removed methods, signature modifications, and exact before/after migration code snippets.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
+                  <div className="font-bold text-white flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-emerald-400" />
+                    B2B Pricing Matrix Explorer
+                  </div>
+                  <p className="text-slate-300">
+                    Compare normalized tier costs, per-seat/usage pricing, included limits, overage rates, and hidden terms for enterprise SaaS tools.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Connecting AI Assistants via MCP */}
+            <div className="bg-[#0f172a] border border-slate-800 rounded-xl p-6 space-y-5">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-emerald-400" />
+                3. Connecting AI Assistants via Model Context Protocol (MCP)
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                The <strong>Model Context Protocol (MCP)</strong> allows any AI model to safely discover and invoke tools on your Data Refinery without custom coding.
+              </p>
+
+              <div className="space-y-3 text-xs">
+                <div className="font-bold text-slate-200 uppercase tracking-wider">Example AI Questions you can ask once connected:</div>
+                <div className="grid md:grid-cols-2 gap-3 font-mono">
+                  <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-slate-300">
+                    &ldquo;Check if there are breaking changes in stripe-node v15 and show me code migration diffs.&rdquo;
+                  </div>
+                  <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-slate-300">
+                    &ldquo;Compare DataDog pricing tiers and tell me the cheapest tier with 15-month metric retention.&rdquo;
+                  </div>
+                  <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-slate-300">
+                    &ldquo;What are the mandatory permit steps and penalties for a short-term rental in San Francisco?&rdquo;
+                  </div>
+                  <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-slate-300">
+                    &ldquo;Refine this pricing page URL: https://... and extract the table into JSON.&rdquo;
+                  </div>
+                </div>
+              </div>
+
+              {/* Step-by-step setup cards */}
+              <div className="pt-2">
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+                  <div className="font-bold text-xs text-white">Live Production Endpoint to use:</div>
+                  <code className="text-xs font-mono text-orange-400 bg-slate-900 px-3 py-1.5 rounded block select-all">
+                    https://data-refinery-worker.juanquy.workers.dev/mcp
+                  </code>
                 </div>
               </div>
             </div>
