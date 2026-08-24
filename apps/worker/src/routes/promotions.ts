@@ -16,24 +16,25 @@ promotionRouter.get("/drafts", async (c) => {
     pricingIntelligence: pricingEntities.map(p => ({ product: p.entityKey, summary: p.summary }))
   };
 
-  const prompt = `You are a viral developer marketer and growth engineer for an AI infrastructure startup called "Universal Data Refinery" (Live at https://drefinery.freshbeats.ai).
-The product transforms messy web data into deterministic JSON for AI agents (Cursor, Claude, Antigravity) via Model Context Protocol (MCP).
+  const prompt = `You are a viral developer marketer for "Universal Data Refinery" (https://drefinery.freshbeats.ai).
+The product transforms messy web data into deterministic JSON for AI agents via Model Context Protocol (MCP).
 
-Based on this real refined data from our database:
+Based on this real refined data:
 ${JSON.stringify(context, null, 2)}
 
-Generate high-engagement promotional marketing content in JSON format:
+Generate high-engagement promotional marketing content in JSON format.
+CRITICAL CONSTRAINT: Each full tweet (including hook, text, URL, and hashtags) MUST be strictly UNDER 260 characters total to fit standard Twitter limits.
 {
   "tweets": [
     {
       "hook": string,
-      "tweetText": string,
-      "hashtags": string[]
+      "tweetText": string (Max 180 chars),
+      "hashtags": string[] (1-2 hashtags max)
     }
   ],
   "redditPosts": [
     {
-      "targetSubreddit": string (e.g. "r/Cursor", "r/ClaudeAI", "r/Cloudflare", "r/SideProject"),
+      "targetSubreddit": string,
       "title": string,
       "postBody": string
     }
@@ -79,14 +80,14 @@ Respond ONLY with raw parseable JSON.`;
       campaign: {
         tweets: [
           {
-            hook: "AI coding agents shouldn't hallucinate deprecated APIs.",
-            tweetText: "Just launched Universal Data Refinery! ⚡ We crawl SDK changelogs, B2B pricing, and municipal codes and turn them into pristine JSON machine fuel for AI agents via Model Context Protocol (MCP).\n\nTry the live Studio: https://drefinery.freshbeats.ai",
-            hashtags: ["#AI", "#Cloudflare", "#MCP", "#BuildInPublic", "#DevTools"]
+            hook: "AI agents shouldn't hallucinate.",
+            tweetText: "Just launched Universal Data Refinery! ⚡ Refines SDK changelogs, B2B pricing & city permits into clean JSON for AI agents via MCP.\n\nStudio: https://drefinery.freshbeats.ai",
+            hashtags: ["#AI", "#Cloudflare", "#MCP"]
           },
           {
-            hook: "Why raw web scraping is dying in the Agent Internet era:",
-            tweetText: "Agents don't need 50,000 tokens of messy HTML boilerplate. They need strict Zod-validated JSON with semantic diffing.\n\nBuilt on @Cloudflare Workers AI + D1 SQL: https://drefinery.freshbeats.ai",
-            hashtags: ["#CloudflareWorkers", "#AIagents", "#IndieHacker"]
+            hook: "Raw web scraping is dying for AI agents:",
+            tweetText: "Agents need strict JSON with semantic diffing, not 50k tokens of messy HTML.\n\nBuilt on @Cloudflare Workers AI:\nhttps://drefinery.freshbeats.ai",
+            hashtags: ["#Cloudflare", "#AIagents"]
           }
         ],
         redditPosts: [

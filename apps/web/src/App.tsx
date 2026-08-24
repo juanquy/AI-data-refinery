@@ -1484,7 +1484,7 @@ export default function App() {
 
                   <div className="grid md:grid-cols-2 gap-4">
                     {campaignData.tweets?.map((tweet: any, idx: number) => {
-                      const fullTweet = `${tweet.hook}\n\n${tweet.tweetText}\n\n${tweet.hashtags?.join(" ") || ""}`;
+                      const fullTweet = `${tweet.tweetText}\n\n${tweet.hashtags?.join(" ") || ""}`.trim();
                       const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(fullTweet)}`;
                       return (
                         <div key={idx} className="bg-slate-950/80 border border-slate-800 rounded-xl p-5 space-y-3 flex flex-col justify-between">
