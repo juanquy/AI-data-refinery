@@ -226,15 +226,18 @@ async function handleToolExecution(env: Env, toolName: string, args: Record<stri
     }
 
     case "refinery_refine_custom_url": {
-      const url = String(args.url || "");
-      const instruction = String(args.instructionPrompt || "");
+      const url = String(args.url || args.sourceUrl || "");
+      const instruction = String(args.instructionPrompt || args.instruction || "Extract all structured information");
+      if (!url || !url.startsWith("http")) {
+        return { error: "Valid HTTP or HTTPS URL required" };
+      }
       const rawText = await fetchWebpageContent(url);
 
       const CustomSchema = z.object({
-        title: z.string(),
-        summary: z.string(),
-        extractedAttributes: z.record(z.any()),
-        insights: z.array(z.string())
+        title: z.string().default("Web Resource"),
+        summary: z.string().default(""),
+        extractedAttributes: z.record(z.any()).default({}),
+        insights: z.array(z.string()).default([])
       });
 
       const extraction = await extractStructuredData(
@@ -244,7 +247,11 @@ async function handleToolExecution(env: Env, toolName: string, args: Record<stri
         CustomSchema
       );
 
-      const entityKey = new URL(url).hostname;
+      let entityKey = "custom-page";
+      try {
+        entityKey = new URL(url).hostname;
+      } catch {}
+
       await saveRefinedEntity(env, {
         domain: "custom",
         entityKey,

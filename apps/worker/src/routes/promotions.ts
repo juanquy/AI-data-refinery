@@ -47,7 +47,7 @@ CRITICAL CONSTRAINT: Each full tweet (including hook, text, URL, and hashtags) M
 Respond ONLY with raw parseable JSON.`;
 
   try {
-    const aiResponse: any = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct" as any, {
+    const aiResponse: any = await c.env.AI.run("@cf/meta/llama-3.3-70b-instruct" as any, {
       messages: [
         { role: "system", content: "You are a tech marketing growth expert. Output strictly valid JSON." },
         { role: "user", content: prompt }

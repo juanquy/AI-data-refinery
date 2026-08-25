@@ -21,17 +21,16 @@ customRouter.get("/", async (c) => {
   return c.json({ status: "success", count: entities.length, items: entities });
 });
 
-// Universal on-demand refine endpoint
 customRouter.post("/refine", async (c) => {
   const startTime = Date.now();
   const rawBody = await c.req.json();
-  const parseResult = CustomRefinementRequestSchema.safeParse(rawBody);
+  const sourceUrl = rawBody.sourceUrl || rawBody.url;
+  const domainName = rawBody.domainName || "custom";
+  const instructionPrompt = rawBody.instructionPrompt || rawBody.prompt || "Extract key structured data";
 
-  if (!parseResult.success) {
-    return c.json({ error: "Invalid request payload", details: parseResult.error.format() }, 400);
+  if (!sourceUrl || !sourceUrl.startsWith("http")) {
+    return c.json({ error: "Valid sourceUrl or url required" }, 400);
   }
-
-  const { sourceUrl, domainName, instructionPrompt } = parseResult.data;
 
   let rawText = "";
   try {
@@ -41,16 +40,16 @@ customRouter.post("/refine", async (c) => {
   }
 
   const prompt = `You are a Universal AI Data Refinery.
-Your task: Extract structured machine intelligence according to these user instructions:
+Your task: Ingest this raw webpage text and extract structured machine intelligence based on these instructions:
 "${instructionPrompt}"
 
-Respond ONLY with a valid JSON object matching this structure:
+You MUST output a JSON object with these EXACT keys:
 {
-  "title": string,
-  "summary": string,
-  "extractedAttributes": Record<string, any>,
-  "keyInsights": string[],
-  "actionableItems": string[]
+  "title": "Clear concise title of the page or topic",
+  "summary": "2-3 sentence executive summary of key takeaways",
+  "extractedAttributes": { ...key structured data, items, numbers, or records found... },
+  "keyInsights": ["bullet insight 1", "bullet insight 2"],
+  "actionableItems": ["recommended action 1"]
 }`;
 
   try {
@@ -61,31 +60,57 @@ Respond ONLY with a valid JSON object matching this structure:
       GenericExtractionSchema
     );
 
-    const entityKey = new URL(sourceUrl).hostname + new URL(sourceUrl).pathname.replace(/[^a-zA-Z0-9]/g, "-");
-    const saved = await saveRefinedEntity(c.env, {
-      domain: "custom",
+    const entityKey = new URL(sourceUrl).hostname;
+    await saveRefinedEntity(c.env, {
+      domain: domainName,
       entityKey,
-      structuredData: {
-        sourceUrl,
-        customDomain: domainName,
-        ...extraction.data
-      },
-      summary: extraction.summary,
-      confidenceScore: 0.95
+      structuredData: extraction.data,
+      summary: extraction.summary
     });
 
     return c.json({
       status: "success",
-      entityId: saved.entityId,
-      entityKey,
+      durationMs: Date.now() - startTime,
       sourceUrl,
-      domain: domainName,
+      entityKey,
       summary: extraction.summary,
-      data: extraction.data,
-      diff: saved.diff,
-      durationMs: Date.now() - startTime
+      structuredData: extraction.data
     });
   } catch (err: any) {
-    return c.json({ error: `Custom refinement failed: ${err.message}` }, 500);
+    // If strict schema fails, attempt generic JSON normalization
+    try {
+      const fallbackAi: any = await c.env.AI.run("@cf/meta/llama-3.3-70b-instruct" as any, {
+        messages: [
+          { role: "system", content: "Extract clean structured JSON with 'title', 'summary', and 'extractedAttributes' keys." },
+          { role: "user", content: `URL: ${sourceUrl}\nInstructions: ${instructionPrompt}\nText:\n${rawText.substring(0, 10000)}` }
+        ],
+        temperature: 0.1,
+        max_tokens: 2500
+      });
+      const rawTextOutput = String(fallbackAi?.response || JSON.stringify(fallbackAi));
+      const firstBrace = rawTextOutput.indexOf("{");
+      const lastBrace = rawTextOutput.lastIndexOf("}");
+      let parsed: any = {};
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        parsed = JSON.parse(rawTextOutput.substring(firstBrace, lastBrace + 1));
+      }
+      const normalizedData = {
+        title: parsed.title || parsed.name || `${new URL(sourceUrl).hostname} Refined Data`,
+        summary: parsed.summary || parsed.description || "Structured web intelligence extracted by Workers AI",
+        extractedAttributes: parsed.extractedAttributes || parsed.attributes || parsed,
+        keyInsights: parsed.keyInsights || parsed.insights || [],
+        actionableItems: parsed.actionableItems || []
+      };
+      return c.json({
+        status: "success",
+        durationMs: Date.now() - startTime,
+        sourceUrl,
+        entityKey: new URL(sourceUrl).hostname,
+        summary: normalizedData.summary,
+        structuredData: normalizedData
+      });
+    } catch (finalErr: any) {
+      return c.json({ error: `Custom refinement failed: ${err.message}` }, 500);
+    }
   }
 });
