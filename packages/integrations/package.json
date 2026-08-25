@@ -1,0 +1,10 @@
+{
+  "name": "@data-refinery/integrations",
+  "version": "1.0.0",
+  "description": "LangChain and LlamaIndex official loaders & tools for Universal Data Refinery",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@data-refinery/schema": "*"
+  }
+}

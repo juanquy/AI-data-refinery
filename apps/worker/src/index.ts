@@ -35,19 +35,25 @@ app.use("/api/v1/dev/*", async (c, next) => {
     ).bind(apiKey).first();
 
     if (!record) {
+      c.header("X-Refinery-Price-Per-Query", "$0.005 USD");
+      c.header("X-Refinery-Protocol", "HTTP-402-Autonomous-Agent");
+      c.header("X-Refinery-Agent-Token-Endpoint", "https://data-refinery-worker.juanquy.workers.dev/api/v1/billing/agent-token");
       return c.json({
         error: "Invalid or inactive API Key",
         status: 402,
-        message: "Payment Required. Subscribe at https://drefinery.freshbeats.ai",
+        message: "Payment Required. Obtain an Autonomous Agent Token at /api/v1/billing/agent-token or subscribe at https://drefinery.freshbeats.ai",
+        agentTokenEndpoint: "https://data-refinery-worker.juanquy.workers.dev/api/v1/billing/agent-token",
         checkoutUrl: "https://data-refinery-worker.juanquy.workers.dev/api/v1/billing/create-checkout"
       }, 402);
     }
 
     if (record.current_usage >= record.monthly_quota) {
+      c.header("X-Refinery-Price-Per-Query", "$0.005 USD");
+      c.header("X-Refinery-Protocol", "HTTP-402-Autonomous-Agent");
       return c.json({
         error: "Monthly quota exceeded",
         status: 402,
-        message: "Payment Required: Your 10,000 monthly quota has been exhausted. Upgrade plan at https://drefinery.freshbeats.ai",
+        message: "Payment Required: Your quota has been exhausted. Refill at /api/v1/billing/agent-token or https://drefinery.freshbeats.ai",
         currentUsage: record.current_usage,
         monthlyQuota: record.monthly_quota
       }, 402);

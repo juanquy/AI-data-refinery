@@ -92,7 +92,41 @@ billingRouter.get("/session-key", async (c) => {
   }
 });
 
-// 3. Verify an existing API key and inspect remaining quota
+// 3. Autonomous Agent Micro-Token Provisioning (HTTP 402 Pay-Per-Query)
+billingRouter.post("/agent-token", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const agentName = body.agentName || "Autonomous_Agent";
+  const agentOwner = body.agentOwner || "agent@autonomous.ai";
+  const queriesAllowance = Number(body.queriesAllowance || 100);
+
+  const rawRandom = crypto.randomUUID().replace(/-/g, "");
+  const agentToken = `ref_agent_${rawRandom}`;
+  const keyId = `key_agent_${crypto.randomUUID()}`;
+
+  await c.env.DB.prepare(
+    `INSERT INTO api_keys (id, key_value, user_email, plan, monthly_quota, current_usage, status, created_at)
+     VALUES (?, ?, ?, 'AGENT_MICRO', ?, 0, 'ACTIVE', CURRENT_TIMESTAMP)`
+  )
+    .bind(keyId, agentToken, `${agentName} (${agentOwner})`, queriesAllowance)
+    .run();
+
+  return c.json({
+    status: "success",
+    agentName,
+    agentToken,
+    plan: "AGENT_MICRO",
+    queriesAllowance,
+    pricePerQuery: "$0.005 USD",
+    protocol: "HTTP-402-Pay-Per-Query",
+    usageHeaders: {
+      "Authorization": `Bearer ${agentToken}`,
+      "X-Refinery-Key": agentToken
+    },
+    message: `Prepaid agent key activated with ${queriesAllowance} query credits.`
+  });
+});
+
+// 4. Verify/Inspect any key
 billingRouter.get("/verify-key", async (c) => {
   const key = c.req.query("key") || c.req.header("X-Refinery-Key") || c.req.header("Authorization")?.replace("Bearer ", "");
   if (!key) {

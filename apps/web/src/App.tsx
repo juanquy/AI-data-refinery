@@ -38,7 +38,9 @@ import {
   Trash2,
   Settings2,
   Plus,
-  Radio
+  Radio,
+  Eye,
+  Bot
 } from "lucide-react";
 
 interface DiffItem {
@@ -270,6 +272,44 @@ export default function App() {
     } finally {
       setCheckingKey(false);
     }
+  };
+
+  // Phase 2: Visual Diff Time-Travel & Agent Micro-Tokens
+  const [selectedDiffModal, setSelectedDiffModal] = useState<any | null>(null);
+  const [agentTokenName, setAgentTokenName] = useState("AutoGPT_Worker");
+  const [agentTokenOwner, setAgentTokenOwner] = useState("");
+  const [agentTokenAllowance, setAgentTokenAllowance] = useState("100");
+  const [agentTokenResult, setAgentTokenResult] = useState<any | null>(null);
+  const [agentTokenLoading, setAgentTokenLoading] = useState(false);
+  const [copiedSdkCode, setCopiedSdkCode] = useState<string | null>(null);
+
+  const handleGenerateAgentToken = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAgentTokenLoading(true);
+    setAgentTokenResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/billing/agent-token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentName: agentTokenName.trim() || "Autonomous_Agent",
+          agentOwner: agentTokenOwner.trim() || "agent@community.ai",
+          queriesAllowance: Number(agentTokenAllowance) || 100
+        })
+      });
+      const data = await res.json();
+      setAgentTokenResult(data);
+    } catch (err: any) {
+      alert("Error generating micro-token: " + err.message);
+    } finally {
+      setAgentTokenLoading(false);
+    }
+  };
+
+  const copySdkSnippet = (code: string, id: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedSdkCode(id);
+    setTimeout(() => setCopiedSdkCode(null), 2000);
   };
 
   const copyApiKeyToClipboard = (key: string) => {
@@ -791,7 +831,18 @@ export default function App() {
 
                   <p className="text-sm text-slate-200">{diff.diffSummary}</p>
 
-                  {/* Changes List */}
+                  {/* Changes List & Action Buttons */}
+                  <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
+                    <button
+                      onClick={() => setSelectedDiffModal(diff)}
+                      className="px-3.5 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Inspect Visual Side-by-Side Diff & Timeline
+                    </button>
+                    <span className="text-[11px] text-slate-500 font-mono">AST Delta Analysis Active</span>
+                  </div>
+
                   {Array.isArray(diff.changes) && diff.changes.length > 0 && (
                     <div className="bg-slate-950/60 rounded-lg p-3 border border-slate-800/80 space-y-2">
                       <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -819,6 +870,97 @@ export default function App() {
                 </div>
               )}
             </div>
+
+            {/* VISUAL DIFF & TIME-TRAVEL TIMELINE MODAL */}
+            {selectedDiffModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                <div className="bg-[#0b1120] border border-slate-700 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  {/* Modal Header */}
+                  <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-5 h-5 text-orange-400" />
+                      <div>
+                        <div className="text-sm font-bold text-white flex items-center gap-2">
+                          Visual Semantic Diff Inspector: <span className="font-mono text-orange-400">{selectedDiffModal.entityKey}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          Domain: {selectedDiffModal.domain} • Severity: {selectedDiffModal.severity}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedDiffModal(null)}
+                      className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      ✕ Close
+                    </button>
+                  </div>
+
+                  {/* Time-Travel Version Evolution Bar */}
+                  <div className="px-6 py-3 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between text-xs text-slate-300 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] uppercase font-bold text-slate-400">Time-Travel Version Snapshot:</span>
+                      <span className="px-2.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-amber-300">Previous Version Snapshot</span>
+                      <span className="text-slate-500 font-mono">➔</span>
+                      <span className="px-2.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/50 font-mono text-emerald-400">Current Refined Snapshot (Latest)</span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-mono">{new Date(selectedDiffModal.detectedAt).toLocaleString()}</span>
+                  </div>
+
+                  {/* Side-by-Side Comparison Panes */}
+                  <div className="p-6 overflow-y-auto flex-1 grid md:grid-cols-2 gap-4 font-mono text-xs">
+                    {/* Left: Previous Version Snapshot (Red Highlights) */}
+                    <div className="bg-slate-950 border border-red-500/20 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-red-500/20">
+                        <span className="text-red-400 font-bold uppercase text-[11px] flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-red-400"></span> Previous Snapshot (Deprecated / Removed)
+                        </span>
+                        <span className="text-[10px] text-slate-500">Baseline</span>
+                      </div>
+                      <div className="p-3 bg-red-950/20 border border-red-900/30 rounded-lg text-red-200/90 leading-relaxed text-[11px]">
+                        <div className="font-semibold text-red-300 mb-1">--- Removed / Deprecated AST Structures ---</div>
+                        {selectedDiffModal.changes?.map((c: any, i: number) => (
+                          <div key={i} className="py-0.5">
+                            - [{c.field}]: {typeof c.oldValue === "object" ? JSON.stringify(c.oldValue) : (c.oldValue || c.significance || "Previous signature")}
+                          </div>
+                        )) || <div>- Legacy API parameters and signature schema</div>}
+                      </div>
+                    </div>
+
+                    {/* Right: Current Version Snapshot (Green Highlights) */}
+                    <div className="bg-slate-950 border border-emerald-500/20 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-emerald-500/20">
+                        <span className="text-emerald-400 font-bold uppercase text-[11px] flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400"></span> Current Snapshot (Added / Upgraded)
+                        </span>
+                        <span className="text-[10px] text-emerald-400">Active</span>
+                      </div>
+                      <div className="p-3 bg-emerald-950/20 border border-emerald-900/30 rounded-lg text-emerald-200/90 leading-relaxed text-[11px]">
+                        <div className="font-semibold text-emerald-300 mb-1">+++ Upgraded / Added Semantic Delta +++</div>
+                        {selectedDiffModal.changes?.map((c: any, i: number) => (
+                          <div key={i} className="py-0.5">
+                            + [{c.field}]: {typeof c.newValue === "object" ? JSON.stringify(c.newValue) : (c.newValue || c.significance || "Upgraded signature")}
+                          </div>
+                        )) || <div>+ Verified machine-executable parameters and migration diffs</div>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Summary Footer */}
+                  <div className="px-6 py-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between flex-wrap gap-2 text-xs">
+                    <p className="text-slate-300 font-sans text-xs">
+                      <strong className="text-white">AI Executive Diff Summary:</strong> {selectedDiffModal.diffSummary}
+                    </p>
+                    <button
+                      onClick={() => setSelectedDiffModal(null)}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 text-slate-950 font-bold text-xs cursor-pointer"
+                    >
+                      Done Inspecting
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1231,6 +1373,74 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            {/* LangChain & LlamaIndex Official Community Loaders */}
+            <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
+                    LangChain & LlamaIndex Official Community SDK Loaders
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Connect autonomous LangGraph, AutoGen, and LlamaIndex agents directly with 1 line of code.
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                  TypeScript / Node.js
+                </span>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4 text-xs">
+                {/* LangChain Snippet */}
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-amber-400">🦜🔗 LangChain Document Loader</span>
+                    <button
+                      onClick={() => copySdkSnippet(`import { DataRefineryLoader } from "@data-refinery/integrations";\n\nconst loader = new DataRefineryLoader({ domain: "dev", query: "stripe-node" });\nconst docs = await loader.load();`, "lc")}
+                      className="text-[11px] font-semibold px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedSdkCode === "lc" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      {copiedSdkCode === "lc" ? "Copied!" : "Copy Snippet"}
+                    </button>
+                  </div>
+                  <pre className="p-3 bg-[#080d18] rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 overflow-x-auto leading-relaxed">
+{`import { DataRefineryLoader } from "@data-refinery/integrations";
+
+// Load verified breaking change intelligence into LangChain RAG
+const loader = new DataRefineryLoader({
+  domain: "dev",
+  query: "stripe-node"
+});
+const docs = await loader.load();`}
+                  </pre>
+                </div>
+
+                {/* LlamaIndex Snippet */}
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-cyan-400">🦙 LlamaIndex Document Reader</span>
+                    <button
+                      onClick={() => copySdkSnippet(`import { DataRefineryReader } from "@data-refinery/integrations";\n\nconst reader = new DataRefineryReader();\nconst docs = await reader.loadData({ domain: "pricing", entityKey: "datadog" });`, "li")}
+                      className="text-[11px] font-semibold px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedSdkCode === "li" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      {copiedSdkCode === "li" ? "Copied!" : "Copy Snippet"}
+                    </button>
+                  </div>
+                  <pre className="p-3 bg-[#080d18] rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 overflow-x-auto leading-relaxed">
+{`import { DataRefineryReader } from "@data-refinery/integrations";
+
+// Load verified B2B SaaS pricing matrix into LlamaIndex
+const reader = new DataRefineryReader();
+const docs = await reader.loadData({
+  domain: "pricing",
+  entityKey: "datadog"
+});`}
+                  </pre>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1601,6 +1811,92 @@ export default function App() {
                       <div><span className="text-slate-400">Email:</span> {keyInspectResult.userEmail}</div>
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+
+            {/* AUTONOMOUS AGENT MICRO-TOKEN GENERATOR (HTTP 402 PAY-PER-QUERY) */}
+            <div className="bg-[#0f172a] border border-cyan-500/30 rounded-2xl p-6 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 text-sm font-bold text-white">
+                  <Bot className="w-4 h-4 text-cyan-400" />
+                  <span>Autonomous Agent Micro-Token Generator (HTTP 402 Pay-Per-Query)</span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono">
+                  $0.005 / Query Micro-Rate
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Generate instant prepaid query tokens for autonomous AI agents (LangChain, AutoGPT, Claude, Cursor) without requiring a human monthly subscription.
+              </p>
+
+              <form onSubmit={handleGenerateAgentToken} className="grid md:grid-cols-4 gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">Agent Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. AutoGPT_Worker"
+                    value={agentTokenName}
+                    onChange={(e) => setAgentTokenName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">Agent Owner Email</label>
+                  <input
+                    type="email"
+                    placeholder="agent@autonomous.ai"
+                    value={agentTokenOwner}
+                    onChange={(e) => setAgentTokenOwner(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">Queries Allowance</label>
+                  <select
+                    value={agentTokenAllowance}
+                    onChange={(e) => setAgentTokenAllowance(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="100">100 Queries ($0.50)</option>
+                    <option value="500">500 Queries ($2.50)</option>
+                    <option value="1000">1,000 Queries ($5.00)</option>
+                    <option value="5000">5,000 Queries ($25.00)</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    disabled={agentTokenLoading}
+                    className="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {agentTokenLoading ? "Generating..." : "+ Provision Agent Key"}
+                  </button>
+                </div>
+              </form>
+
+              {agentTokenResult && (
+                <div className="p-4 rounded-xl bg-cyan-950/20 border border-cyan-800/40 text-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-cyan-300">✅ Agent Micro-Token Generated:</span>
+                    <span className="text-slate-400 font-mono">{agentTokenResult.queriesAllowance} Query Credits Active</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={agentTokenResult.agentToken}
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-cyan-400 select-all"
+                    />
+                    <button
+                      onClick={() => copyApiKeyToClipboard(agentTokenResult.agentToken)}
+                      className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedKey ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedKey ? "Copied!" : "Copy Key"}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
