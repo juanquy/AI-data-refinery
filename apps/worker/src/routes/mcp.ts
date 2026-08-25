@@ -168,27 +168,28 @@ mcpRouter.post("/", async (c) => {
 async function handleToolExecution(env: Env, toolName: string, args: Record<string, any>) {
   switch (toolName) {
     case "refinery_dev_breaking_changes": {
-      const pkg = String(args.packageOrService || "").toLowerCase();
-      const entity = await getLatestEntity(env, "developer", pkg);
-      if (!entity) {
-        return {
-          status: "not_found",
-          message: `No refined developer intelligence found for '${pkg}'. Trigger on-demand refinement via 'refinery_refine_custom_url'.`
-        };
+      const pkg = String(args.packageOrService || args.package || "").toLowerCase();
+      if (pkg) {
+        const entity = await getLatestEntity(env, "developer", pkg);
+        if (entity) {
+          return entity.structuredData;
+        }
       }
-      if (args.breakingOnly && entity.structuredData?.breakingChanges) {
-        return {
-          package: pkg,
-          version: entity.versionLabel,
-          breakingChanges: entity.structuredData.breakingChanges,
-          summary: entity.summary
-        };
+      // Fallback to recent developer intelligence
+      const { results } = await env.DB.prepare(
+        "SELECT structured_data FROM refined_entities WHERE domain = 'developer' ORDER BY created_at DESC LIMIT 5"
+      ).all();
+      if (results && results.length > 0) {
+        return results.length === 1 ? JSON.parse(results[0].structured_data) : results.map((r: any) => JSON.parse(r.structured_data));
       }
-      return entity.structuredData;
+      return {
+        status: "not_found",
+        message: `No refined developer intelligence found for '${pkg}'. Trigger on-demand refinement via 'refinery_refine_custom_url'.`
+      };
     }
 
     case "refinery_b2b_pricing_matrix": {
-      const product = String(args.companyOrProduct || "").toLowerCase();
+      const product = String(args.companyOrProduct || args.product || "").toLowerCase();
       if (product) {
         const entity = await getLatestEntity(env, "pricing", product);
         if (entity) return entity.structuredData;
@@ -197,7 +198,10 @@ async function handleToolExecution(env: Env, toolName: string, args: Record<stri
       const { results } = await env.DB.prepare(
         "SELECT structured_data FROM refined_entities WHERE domain = 'pricing' LIMIT 5"
       ).all();
-      return (results || []).map((r: any) => JSON.parse(r.structured_data));
+      if (results && results.length > 0) {
+        return results.length === 1 ? JSON.parse(results[0].structured_data) : results.map((r: any) => JSON.parse(r.structured_data));
+      }
+      return { status: "not_found", message: `No pricing matrix found for '${product}'` };
     }
 
     case "refinery_regulatory_compliance": {
