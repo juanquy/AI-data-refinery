@@ -47,6 +47,7 @@ import {
   Wand2,
   FileCode
 } from "lucide-react";
+import { LandingPage } from "./LandingPage";
 
 interface DiffItem {
   id: string;
@@ -128,6 +129,15 @@ interface WorkspaceMember {
 const API_BASE = import.meta.env.DEV ? "" : "https://data-refinery-worker.juanquy.workers.dev";
 
 export default function App() {
+  const [currentView, setCurrentView] = useState<"landing" | "studio">(() => {
+    if (typeof window !== "undefined") {
+      if (window.location.hash === "#studio" || window.location.search.includes("session_id") || window.location.hash.startsWith("#tab-")) {
+        return "studio";
+      }
+    }
+    return "landing";
+  });
+
   const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "schemas" | "playground" | "mcp" | "help" | "billing" | "marketing" | "management">("diffs");
   const [loading, setLoading] = useState(false);
   const [diffs, setDiffs] = useState<DiffItem[]>([]);
@@ -818,17 +828,38 @@ export default function App() {
     }
   };
 
+  if (currentView === "landing") {
+    return (
+      <LandingPage
+        onEnterStudio={(tab) => {
+          if (tab) setActiveTab(tab as any);
+          setCurrentView("studio");
+          window.location.hash = tab ? `tab-${tab}` : "studio";
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#080d18] text-slate-100 flex flex-col selection:bg-orange-500 selection:text-white">
       {/* Top Navbar */}
       <header className="border-b border-slate-800/80 bg-[#0d1424]/90 backdrop-blur sticky top-0 z-50">
         <div className="max-w-[96%] xl:max-w-[1550px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img
-              src="/logo.png"
-              alt="Universal Data Refinery Logo"
-              className="h-10 w-auto object-contain drop-shadow-[0_0_12px_rgba(244,129,32,0.3)]"
-            />
+            <div
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => {
+                setCurrentView("landing");
+                window.location.hash = "landing";
+              }}
+              title="Return to Landing Page"
+            >
+              <img
+                src="/logo.png"
+                alt="Universal Data Refinery Logo"
+                className="h-10 w-auto object-contain drop-shadow-[0_0_12px_rgba(244,129,32,0.3)]"
+              />
+            </div>
             <div className="hidden sm:block border-l border-slate-800 pl-4 py-0.5">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20">
@@ -844,6 +875,18 @@ export default function App() {
 
           {/* Quick Stats & Controls */}
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setCurrentView("landing");
+                window.location.hash = "landing";
+              }}
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 transition-all cursor-pointer shadow-sm"
+              title="View Animated Landing Experience"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Landing Page</span>
+            </button>
+
             {/* Workspace Selector */}
             <div className="hidden md:flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1.5 rounded-lg border border-slate-800 text-xs">
               <FolderPlus className="w-3.5 h-3.5 text-cyan-400" />
