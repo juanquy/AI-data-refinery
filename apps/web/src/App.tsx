@@ -283,6 +283,51 @@ export default function App() {
   const [agentTokenLoading, setAgentTokenLoading] = useState(false);
   const [copiedSdkCode, setCopiedSdkCode] = useState<string | null>(null);
 
+  // Founder / Admin Gate State
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("refinery_admin_unlocked") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const [adminPasscodeInput, setAdminPasscodeInput] = useState("");
+  const [adminError, setAdminError] = useState<string | null>(null);
+
+  const handleUnlockAdmin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = adminPasscodeInput.trim().toLowerCase();
+    if (
+      code === "founder" ||
+      code === "refinery2026" ||
+      code === "admin" ||
+      code.startsWith("rf_live_") ||
+      code.startsWith("rf_test_") ||
+      code.startsWith("ref_agent_")
+    ) {
+      try {
+        localStorage.setItem("refinery_admin_unlocked", "true");
+      } catch {}
+      setIsAdminUnlocked(true);
+      setAdminModalOpen(false);
+      setAdminPasscodeInput("");
+      setAdminError(null);
+    } else {
+      setAdminError("Invalid Founder Passcode or API Key. Try again.");
+    }
+  };
+
+  const handleLockAdmin = () => {
+    try {
+      localStorage.removeItem("refinery_admin_unlocked");
+    } catch {}
+    setIsAdminUnlocked(false);
+    if (activeTab === "marketing" || activeTab === "management") {
+      setActiveTab("diffs");
+    }
+  };
+
   const handleGenerateAgentToken = async (e: React.FormEvent) => {
     e.preventDefault();
     setAgentTokenLoading(true);
@@ -542,6 +587,28 @@ export default function App() {
               <span>Workers AI: Active</span>
             </div>
 
+            {/* Founder / Admin Console Lock/Unlock Button */}
+            {isAdminUnlocked ? (
+              <button
+                onClick={handleLockAdmin}
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all cursor-pointer shadow-sm"
+                title="Lock Founder Console (Return to Public Visitor Mode)"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <span>👑 Founder Console Active</span>
+                <span className="text-[10px] text-slate-400 ml-1 font-mono hover:text-white">✕ Lock</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setAdminModalOpen(true)}
+                className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition-colors cursor-pointer"
+                title="Founder / Admin Access"
+              >
+                <Key className="w-3.5 h-3.5 text-slate-500" />
+                <span className="hidden sm:inline">Founder Console</span>
+              </button>
+            )}
+
             <button
               onClick={fetchData}
               disabled={loading}
@@ -599,74 +666,77 @@ export default function App() {
             </div>
           </div>
 
-          <div className="bg-[#0f172a]/70 border border-slate-800 rounded-xl p-3.5 flex items-center gap-3">
+          <div className="col-span-2 md:col-span-1 bg-[#0f172a]/70 border border-slate-800 rounded-xl p-3.5 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400">
               <Zap className="w-5 h-5" />
             </div>
             <div>
               <div className="text-xs font-medium text-slate-400">MCP Protocol</div>
-              <div className="text-sm font-bold text-emerald-400">Ready (JSON-RPC)</div>
+              <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                Ready (JSON-RPC)
+              </div>
             </div>
           </div>
         </div>
 
         {/* Global Search Bar */}
         <form onSubmit={handleSearch} className="relative">
-          <input
-            type="text"
-            placeholder="Search across all refined domains (e.g. 'breaking change callbacks', 'monthly cost per seat', 'SF rental permit')..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#0d1424] border border-slate-800 rounded-xl px-4 py-3 pl-11 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 transition-all"
-          />
-          <Search className="w-4 h-4 text-slate-500 absolute left-4 top-3.5" />
-          <button
-            type="submit"
-            className="absolute right-2.5 top-2 px-3 py-1.5 text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors"
-          >
-            Refinery Search
-          </button>
+          <div className="relative flex items-center">
+            <Search className="w-4 h-4 text-slate-400 absolute left-4 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search across all refined domains (e.g. 'breaking change callbacks', 'monthly cost per seat', 'SF rental permit')..."
+              className="w-full bg-[#0f172a] border border-slate-800 rounded-xl pl-11 pr-32 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 transition-colors shadow-inner"
+            />
+            <button
+              type="submit"
+              className="absolute right-2 px-4 py-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-slate-950 font-bold text-xs shadow-md transition-all cursor-pointer"
+            >
+              Refinery Search
+            </button>
+          </div>
         </form>
 
-        {/* Search Results Display if active */}
+        {/* Search Results Display */}
         {searchResults && (
-          <div className="bg-[#0f172a] border border-orange-500/30 rounded-xl p-4 space-y-3">
+          <div className="bg-[#0f172a] border border-slate-800 rounded-xl p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-orange-400 flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                Refinery Query Results for: &ldquo;{searchResults.query}&rdquo;
-              </h3>
+              <span className="text-xs font-bold text-slate-300">
+                Vector Search Results ({searchResults.count} matches)
+              </span>
               <button
                 onClick={() => setSearchResults(null)}
-                className="text-xs text-slate-400 hover:text-white"
+                className="text-xs text-slate-500 hover:text-slate-300"
               >
                 Clear Search
               </button>
             </div>
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {searchResults.results?.directMatches?.map((item: any) => (
-                <div key={item.id} className="bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-xs">
-                  <div className="flex items-center justify-between font-mono text-orange-300 font-semibold mb-1">
-                    <span>[{item.domain.toUpperCase()}] {item.entityKey}</span>
-                    <span className="text-slate-500">{item.versionLabel || "v1"}</span>
+            <div className="grid gap-2">
+              {searchResults.results.map((res: any) => (
+                <div key={res.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800/80 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-orange-400">{res.entityKey}</span>
+                    <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                      {res.domain}
+                    </span>
                   </div>
-                  <p className="text-slate-300">{item.summary}</p>
+                  <p className="text-xs text-slate-300">{res.summary}</p>
                 </div>
               ))}
-              {(!searchResults.results?.directMatches || searchResults.results?.directMatches.length === 0) && (
-                <p className="text-xs text-slate-500">No direct matches found. Try searching with a broader keyword.</p>
-              )}
             </div>
           </div>
         )}
 
-        {/* Tab Navigation */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
+        {/* Tab Navigation Menu */}
+        <div className="flex items-center gap-2 flex-wrap border-b border-slate-800/80 pb-3">
+          {/* PUBLIC CLIENT TABS */}
           <button
             onClick={() => setActiveTab("diffs")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
               activeTab === "diffs"
-                ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
+                ? "bg-orange-600 text-white shadow-lg shadow-orange-600/20"
                 : "bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
             }`}
           >
@@ -758,29 +828,36 @@ export default function App() {
             💎 Pricing & API Keys
           </button>
 
-          <button
-            onClick={() => setActiveTab("marketing")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "marketing"
-                ? "bg-gradient-to-r from-pink-500 to-rose-600 text-white shadow-lg shadow-pink-500/20"
-                : "bg-slate-900/60 text-pink-400 hover:text-pink-300 hover:bg-slate-800 border border-pink-500/20"
-            }`}
-          >
-            <Megaphone className="w-4 h-4" />
-            📢 Auto-Promotions
-          </button>
+          {/* GATED FOUNDER / ADMIN TABS (Only visible when unlocked) */}
+          {isAdminUnlocked && (
+            <>
+              <div className="h-6 w-[1px] bg-amber-500/40 mx-1 hidden sm:block"></div>
+              
+              <button
+                onClick={() => setActiveTab("marketing")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                  activeTab === "marketing"
+                    ? "bg-gradient-to-r from-pink-500 to-rose-600 text-white shadow-lg shadow-pink-500/20"
+                    : "bg-pink-950/40 text-pink-300 hover:text-pink-200 hover:bg-pink-900/60 border border-pink-500/30"
+                }`}
+              >
+                <Megaphone className="w-4 h-4" />
+                👑 📢 Auto-Promotions
+              </button>
 
-          <button
-            onClick={() => setActiveTab("management")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "management"
-                ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20"
-                : "bg-slate-900/60 text-cyan-400 hover:text-cyan-300 hover:bg-slate-800 border border-cyan-500/20"
-            }`}
-          >
-            <Settings2 className="w-4 h-4" />
-            ⚙️ Service Management
-          </button>
+              <button
+                onClick={() => setActiveTab("management")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                  activeTab === "management"
+                    ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20"
+                    : "bg-cyan-950/40 text-cyan-300 hover:text-cyan-200 hover:bg-cyan-900/60 border border-cyan-500/30"
+                }`}
+              >
+                <Settings2 className="w-4 h-4" />
+                👑 ⚙️ Service Management
+              </button>
+            </>
+          )}
         </div>
 
         {/* TAB 1: DIFFS & ALERTS */}
@@ -2393,6 +2470,71 @@ const docs = await reader.loadData({
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* FOUNDER / ADMIN CONSOLE UNLOCK MODAL */}
+        {adminModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <div className="bg-[#0b1120] border border-amber-500/30 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <Key className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Founder & Admin Console</h3>
+                    <p className="text-[11px] text-slate-400">Unlock marketing growth & pipeline controls</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setAdminModalOpen(false)}
+                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleUnlockAdmin} className="space-y-3">
+                <label className="text-[11px] font-semibold text-slate-300 block">
+                  Enter Founder Passcode or Active API Key:
+                </label>
+                <input
+                  type="password"
+                  autoFocus
+                  required
+                  placeholder="Enter passcode (e.g. founder) or Pro API key"
+                  value={adminPasscodeInput}
+                  onChange={(e) => setAdminPasscodeInput(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 font-mono"
+                />
+
+                {adminError && (
+                  <p className="text-xs text-red-400 font-semibold">{adminError}</p>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setAdminModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
+                  >
+                    Unlock Founder Console
+                  </button>
+                </div>
+              </form>
+
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
+                <span className="font-semibold text-slate-300 block">💡 Founder Notice:</span>
+                <span>Unlocks autonomous promotion generation, recurring crawler scheduling, and outbound webhooks.</span>
               </div>
             </div>
           </div>
