@@ -121,21 +121,102 @@ app.route("/api/v1/promotions", promotionRouter);
 app.route("/api/v1/management", managementRouter);
 app.route("/mcp", mcpRouter);
 
+// Dynamic SVG Badge Generator for GitHub READMEs
+app.get("/badge/:package.svg", async (c) => {
+  let version = "Verified";
+  let color = "#10b981";
+
+  try {
+    const pkg = (c.req.param("package") || "").replace(/\.svg$/, "").toLowerCase();
+    const entity: any = await c.env.DB.prepare(
+      "SELECT version_label FROM refined_entities WHERE domain = 'developer' AND entity_key = ? ORDER BY created_at DESC LIMIT 1"
+    ).bind(pkg).first();
+
+    const diff: any = await c.env.DB.prepare(
+      "SELECT severity FROM entity_diffs WHERE domain = 'developer' AND entity_key = ? ORDER BY detected_at DESC LIMIT 1"
+    ).bind(pkg).first();
+
+    if (entity?.version_label) version = entity.version_label;
+    if (diff?.severity === "CRITICAL") color = "#ef4444";
+    else if (diff?.severity === "MAJOR") color = "#f59e0b";
+  } catch (err) {
+    // Fallback defaults
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="20" role="img" aria-label="Refinery: ${version}">
+  <linearGradient id="b" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <mask id="a"><rect width="160" height="20" rx="3" fill="#fff"/></mask>
+  <g mask="url(#a)">
+    <path fill="#0f172a" d="M0 0h90v20H0z"/>
+    <path fill="${color}" d="M90 0h70v20H90z"/>
+    <path fill="url(#b)" d="M0 0h160v20H0z"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
+    <text x="450" y="150" fill="#000" fill-opacity=".3" transform="scale(.1)" textLength="700">Refinery</text>
+    <text x="450" y="140" fill="#fff" transform="scale(.1)" textLength="700">Refinery</text>
+    <text x="1250" y="150" fill="#000" fill-opacity=".3" transform="scale(.1)" textLength="500">${version}</text>
+    <text x="1250" y="140" fill="#fff" transform="scale(.1)" textLength="500">${version}</text>
+  </g>
+</svg>`;
+
+  return c.text(svg, 200, {
+    "Content-Type": "image/svg+xml; charset=utf-8",
+    "Cache-Control": "public, max-age=600"
+  });
+});
+
 export default {
   fetch: app.fetch,
   
-  // Scheduled Cron Handler for Autonomous Background Refining
+  // Scheduled Cron Handler for Autonomous Background Refining & Webhook Dispatching
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     console.log(`[Cron Trigger] Starting automated background refinery cycle: ${event.cron}`);
     ctx.waitUntil(
       (async () => {
-        // Query active sources registered for periodic crawling
         try {
-          const { results: sources } = await env.DB.prepare(
-            "SELECT * FROM refinery_sources WHERE enabled = 1 LIMIT 10"
+          // 1. Process active scheduled pipelines
+          const { results: pipelines } = await env.DB.prepare(
+            "SELECT * FROM scheduled_pipelines WHERE status = 'ACTIVE' LIMIT 10"
           ).all();
 
-          console.log(`[Cron Trigger] Processed ${sources?.length || 0} scheduled sources.`);
+          console.log(`[Cron Trigger] Executing ${pipelines?.length || 0} active pipelines...`);
+
+          // 2. Dispatch outbound alerts to registered Discord / Slack webhooks for critical diffs
+          const recentDiff: any = await env.DB.prepare(
+            "SELECT * FROM entity_diffs WHERE severity IN ('CRITICAL', 'MAJOR') ORDER BY detected_at DESC LIMIT 1"
+          ).first();
+
+          if (recentDiff) {
+            const { results: webhooks } = await env.DB.prepare(
+              "SELECT webhook_url FROM webhook_subscriptions WHERE status = 'ACTIVE' LIMIT 20"
+            ).all();
+
+            if (webhooks && webhooks.length > 0) {
+              const alertPayload = {
+                event: "refinery.diff.alert",
+                timestamp: new Date().toISOString(),
+                severity: recentDiff.severity,
+                entity: recentDiff.entity_key,
+                domain: recentDiff.domain,
+                summary: recentDiff.diff_summary,
+                refineryUrl: "https://drefinery.freshbeats.ai"
+              };
+
+              await Promise.allSettled(
+                webhooks.map(wh =>
+                  fetch(wh.webhook_url as string, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(alertPayload)
+                  })
+                )
+              );
+              console.log(`[Cron Trigger] Dispatched alerts to ${webhooks.length} webhooks.`);
+            }
+          }
         } catch (err) {
           console.error("[Cron Trigger Error]", err);
         }
