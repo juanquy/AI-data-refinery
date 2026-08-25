@@ -13,6 +13,9 @@ import { promotionRouter } from "./routes/promotions";
 import { managementRouter } from "./routes/management";
 import { schemasRouter } from "./routes/schemas";
 import { workspacesRouter } from "./routes/workspaces";
+import { exportRouter } from "./routes/export";
+import { marketplaceRouter } from "./routes/marketplace";
+import { enterpriseRouter } from "./routes/enterprise";
 import { listRecentDiffs, listEntitiesByDomain } from "./lib/db";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -129,6 +132,9 @@ app.route("/api/v1/promotions", promotionRouter);
 app.route("/api/v1/management", managementRouter);
 app.route("/api/v1/schemas", schemasRouter);
 app.route("/api/v1/workspaces", workspacesRouter);
+app.route("/api/v1/export", exportRouter);
+app.route("/api/v1/marketplace", marketplaceRouter);
+app.route("/api/v1/enterprise", enterpriseRouter);
 app.route("/mcp", mcpRouter);
 
 // Dynamic SVG Badge Generator for GitHub READMEs

@@ -45,9 +45,28 @@ import {
   FolderPlus,
   Users,
   Wand2,
-  FileCode
+  FileCode,
+  ShoppingBag,
+  Download,
+  Server
 } from "lucide-react";
 import { LandingPage } from "./LandingPage";
+
+interface MarketplaceListing {
+  id: string;
+  creator_name: string;
+  title: string;
+  slug: string;
+  domain: string;
+  description: string;
+  price_per_query: number;
+  total_queries: number;
+  earnings_usd: number;
+  is_featured: number;
+  schema: any;
+  sampleOutput?: any;
+  created_at: string;
+}
 
 interface DiffItem {
   id: string;
@@ -138,7 +157,7 @@ export default function App() {
     return "landing";
   });
 
-  const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "schemas" | "playground" | "mcp" | "help" | "billing" | "marketing" | "management">("diffs");
+  const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "schemas" | "marketplace" | "export" | "playground" | "mcp" | "help" | "billing" | "marketing" | "management">("diffs");
   const [loading, setLoading] = useState(false);
   const [diffs, setDiffs] = useState<DiffItem[]>([]);
   const [devItems, setDevItems] = useState<RefinedEntity[]>([]);
@@ -151,6 +170,29 @@ export default function App() {
     custom: 0,
     recentDiffs: 1
   });
+
+  // Phase 4: Creator Marketplace & Revenue Share State
+  const [marketplaceListings, setMarketplaceListings] = useState<MarketplaceListing[]>([]);
+  const [marketplaceLoading, setMarketplaceLoading] = useState(false);
+  const [newListingTitle, setNewListingTitle] = useState("Biotech & Drug Patent Exclusivity");
+  const [newListingCreator, setNewListingCreator] = useState("BioData Systems");
+  const [newListingDesc, setNewListingDesc] = useState("Extracts pharmaceutical patent exclusivity expiration dates, NDA filing numbers, and therapeutic targets.");
+  const [newListingDomain, setNewListingDomain] = useState("medical");
+  const [newListingPrice, setNewListingPrice] = useState("0.008");
+  const [publishingListing, setPublishingListing] = useState(false);
+  const [queriedListingId, setQueriedListingId] = useState<string | null>(null);
+  const [queryListingResult, setQueryListingResult] = useState<any | null>(null);
+  const [queryingListing, setQueryingListing] = useState(false);
+
+  // Phase 4: LLM Fine-Tuning & RAG Dataset Exporter State
+  const [exportFormat, setExportFormat] = useState<"openai_jsonl" | "llama3_jsonl" | "alpaca" | "rag_chunks">("openai_jsonl");
+  const [exportDomain, setExportDomain] = useState<"all" | "developer" | "pricing" | "regulatory" | "custom">("all");
+  const [exportDataset, setExportDataset] = useState<any[]>([]);
+  const [exportCount, setExportCount] = useState(0);
+  const [exportLoading, setExportLoading] = useState(false);
+
+  // Phase 4: Enterprise SLA & Edge Telemetry State
+  const [slaData, setSlaData] = useState<any | null>(null);
 
   // Phase 3: Visual Schema Studio & Workspace Multi-Tenancy State
   const [customSchemas, setCustomSchemas] = useState<CustomSchemaItem[]>([]);
@@ -290,10 +332,56 @@ export default function App() {
     }
   };
 
+  const fetchMarketplaceListings = async () => {
+    setMarketplaceLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/marketplace`);
+      if (res.ok) {
+        const data = await res.json();
+        setMarketplaceListings(data.listings || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch marketplace:", err);
+    } finally {
+      setMarketplaceLoading(false);
+    }
+  };
+
+  const fetchFineTuningDataset = async () => {
+    setExportLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/export/fine-tuning?format=${exportFormat}&domain=${exportDomain}&limit=200`);
+      if (res.ok) {
+        const data = await res.json();
+        setExportDataset(data.dataset || []);
+        setExportCount(data.count || 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch dataset:", err);
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const fetchSlaHealth = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/enterprise/sla-health`);
+      if (res.ok) {
+        const data = await res.json();
+        setSlaData(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch SLA health:", err);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     fetchSchemas();
     fetchWorkspaces();
+    fetchMarketplaceListings();
+    fetchFineTuningDataset();
+    fetchSlaHealth();
   }, []);
 
   useEffect(() => {
@@ -301,7 +389,60 @@ export default function App() {
       fetchSchemas();
       fetchWorkspaces();
     }
-  }, [activeTab, selectedWorkspace]);
+    if (activeTab === "marketplace") {
+      fetchMarketplaceListings();
+    }
+    if (activeTab === "export") {
+      fetchFineTuningDataset();
+    }
+  }, [activeTab, selectedWorkspace, exportFormat, exportDomain]);
+
+  const handlePublishListing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newListingTitle.trim() || !newListingDesc.trim()) return;
+    setPublishingListing(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/marketplace`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newListingTitle,
+          creatorName: newListingCreator,
+          description: newListingDesc,
+          domain: newListingDomain,
+          pricePerQuery: Number(newListingPrice) || 0.005,
+          schema: { fields: [] }
+        })
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        await fetchMarketplaceListings();
+        alert(`🎉 Listing "${newListingTitle}" published to Creator Marketplace! Earn 70% query royalties.`);
+      } else {
+        alert("Publish failed: " + data.error);
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setPublishingListing(false);
+    }
+  };
+
+  const handleQueryListing = async (listingId: string) => {
+    setQueriedListingId(listingId);
+    setQueryingListing(true);
+    setQueryListingResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/marketplace/${listingId}/query`, { method: "POST" });
+      const data = await res.json();
+      setQueryListingResult(data);
+      await fetchMarketplaceListings(); // update live counter and creator earnings
+    } catch (err: any) {
+      setQueryListingResult({ error: err.message });
+    } finally {
+      setQueryingListing(false);
+    }
+  };
 
   // Visual Schema Field Manipulations
   const handleAddField = () => {
@@ -1121,6 +1262,30 @@ export default function App() {
           >
             <Sliders className="w-4 h-4 text-teal-400" />
             🎨 4. Visual Schema Studio
+          </button>
+
+          <button
+            onClick={() => setActiveTab("marketplace")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === "marketplace"
+                ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/20"
+                : "bg-slate-900/60 text-amber-400 hover:text-amber-300 hover:bg-slate-800 border border-amber-500/20"
+            }`}
+          >
+            <ShoppingBag className="w-4 h-4 text-amber-400" />
+            🛒 5. Creator Marketplace
+          </button>
+
+          <button
+            onClick={() => setActiveTab("export")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === "export"
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20"
+                : "bg-slate-900/60 text-blue-400 hover:text-blue-300 hover:bg-slate-800 border border-blue-500/20"
+            }`}
+          >
+            <Download className="w-4 h-4 text-blue-400" />
+            📦 6. LLM Fine-Tuning Exporter
           </button>
 
           <button
@@ -2073,7 +2238,373 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 5: UNIVERSAL ON-DEMAND REFINER PLAYGROUND */}
+        {/* TAB 5: CREATOR MARKETPLACE & REVENUE SHARING (PHASE 4) */}
+        {activeTab === "marketplace" && (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-amber-400" />
+                  Refinery Creator Marketplace & Revenue Share
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Discover community-curated refineries or publish your own specialized niche schemas. Creators earn <strong className="text-amber-400 font-bold">70% revenue royalties</strong> per agent query.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs px-3 py-1 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 font-bold">
+                  70% Creator Revenue Split
+                </span>
+                <span className="text-xs px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">
+                  {marketplaceListings.length} Active Listings
+                </span>
+              </div>
+            </div>
+
+            {/* Marketplace Grid + Publish Card */}
+            <div className="grid lg:grid-cols-12 gap-6 items-start">
+              {/* Listings Catalog (7 cols) */}
+              <div className="lg:col-span-7 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Featured Community Refineries
+                  </div>
+                  <button
+                    onClick={fetchMarketplaceListings}
+                    className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-xs text-slate-300 flex items-center gap-1"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${marketplaceLoading ? "animate-spin text-amber-400" : ""}`} />
+                    Refresh
+                  </button>
+                </div>
+
+                <div className="grid gap-4">
+                  {marketplaceListings.map((item) => (
+                    <div key={item.id} className="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 space-y-4 hover:border-amber-500/40 transition-colors shadow-xl">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-white">{item.title}</h4>
+                            {item.is_featured === 1 && (
+                              <span className="text-[9px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                Featured
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-0.5">
+                            Created by <span className="text-amber-300 font-semibold">{item.creator_name}</span> • <span className="font-mono">{item.domain}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <div className="text-sm font-black text-emerald-400 font-mono">
+                            ${item.price_per_query} <span className="text-[10px] text-slate-400 font-normal">/ call</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            {item.total_queries} queries • ${(item.earnings_usd || 0).toFixed(2)} earned
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-slate-300 leading-relaxed">{item.description}</p>
+
+                      {/* Sample Data Callout */}
+                      {item.sampleOutput && (
+                        <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-cyan-300 overflow-x-auto">
+                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Sample Machine Output:</div>
+                          <pre className="text-[10px] text-teal-300 overflow-x-auto">{JSON.stringify(item.sampleOutput, null, 2)}</pre>
+                        </div>
+                      )}
+
+                      {/* Action Bar */}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                        <span className="font-mono text-[11px] text-slate-400">
+                          slug: <span className="text-amber-300">{item.slug}</span>
+                        </span>
+                        <button
+                          onClick={() => handleQueryListing(item.id)}
+                          disabled={queryingListing}
+                          className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>Simulate Agent Query (${item.price_per_query})</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Publish New Listing Card (5 cols) */}
+              <div className="lg:col-span-5 bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <h3 className="text-sm font-bold text-white">Publish New Community Refinery</h3>
+                  </div>
+                  <span className="text-[11px] text-emerald-400 font-bold">70% Royalty</span>
+                </div>
+
+                <form onSubmit={handlePublishListing} className="space-y-3.5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-300">Listing Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={newListingTitle}
+                      onChange={(e) => setNewListingTitle(e.target.value)}
+                      placeholder="e.g. SEC 10-K Disclosures, Biotech Approvals"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-300">Creator / Entity Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={newListingCreator}
+                        onChange={(e) => setNewListingCreator(e.target.value)}
+                        placeholder="Your Studio or Company"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-300">Domain Category</label>
+                      <select
+                        value={newListingDomain}
+                        onChange={(e) => setNewListingDomain(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500 cursor-pointer"
+                      >
+                        <option value="financial">Financial (SEC / Stocks)</option>
+                        <option value="medical">Medical (FDA / Biotech)</option>
+                        <option value="regulatory">Regulatory (Laws / AI Act)</option>
+                        <option value="developer">Developer SDKs</option>
+                        <option value="pricing">B2B SaaS Pricing</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-300">Price Per Query (USD)</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      min="0.001"
+                      max="0.05"
+                      value={newListingPrice}
+                      onChange={(e) => setNewListingPrice(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-emerald-400 font-mono focus:outline-none focus:border-amber-500"
+                    />
+                    <span className="text-[10px] text-slate-400 block">
+                      💡 You keep <strong className="text-emerald-400">${(Number(newListingPrice) * 0.70).toFixed(4)}</strong> per query via Stripe Connect.
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-300">Description & Purpose</label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={newListingDesc}
+                      onChange={(e) => setNewListingDesc(e.target.value)}
+                      placeholder="Detailed explanation of what facts and fields this refinery extracts..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 resize-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={publishingListing}
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    <span>{publishingListing ? "Publishing Listing..." : "Publish to Creator Marketplace"}</span>
+                  </button>
+                </form>
+
+                {queryListingResult && (
+                  <div className="p-3.5 rounded-xl bg-slate-950 border border-amber-500/40 text-xs space-y-1.5">
+                    <div className="font-bold text-amber-400 flex items-center justify-between">
+                      <span>⚡ Agent Query Attributed!</span>
+                      <span className="text-[10px] font-mono text-emerald-400">+${queryListingResult.creatorRoyaltyUSD?.toFixed(4)} Earned</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      Query tracked successfully. 70% royalty was credited to the creator balance.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: LLM FINE-TUNING & RAG EXPORTER (PHASE 4) */}
+        {activeTab === "export" && (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <Download className="w-5 h-5 text-blue-400" />
+                  1-Click RAG & LLM Fine-Tuning Dataset Exporter
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Export verified historical snapshots and code diffs directly into OpenAI, Llama 3.3, Alpaca, or RAG vector training formats.
+                </p>
+              </div>
+              <a
+                href={`${API_BASE}/api/v1/export/fine-tuning?format=${exportFormat}&domain=${exportDomain}&download=true`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-lg shadow-blue-500/25 transition-all cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download Dataset (.jsonl)</span>
+              </a>
+            </div>
+
+            {/* Controls Bar */}
+            <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 flex items-center justify-between flex-wrap gap-4 shadow-xl">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-slate-300">Training Format:</span>
+                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                  <button
+                    onClick={() => setExportFormat("openai_jsonl")}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${exportFormat === "openai_jsonl" ? "bg-blue-600 text-white shadow" : "text-slate-400 hover:text-white"}`}
+                  >
+                    OpenAI Chat JSONL
+                  </button>
+                  <button
+                    onClick={() => setExportFormat("llama3_jsonl")}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${exportFormat === "llama3_jsonl" ? "bg-cyan-600 text-white shadow" : "text-slate-400 hover:text-white"}`}
+                  >
+                    Llama 3.3 Instruct
+                  </button>
+                  <button
+                    onClick={() => setExportFormat("alpaca")}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${exportFormat === "alpaca" ? "bg-purple-600 text-white shadow" : "text-slate-400 hover:text-white"}`}
+                  >
+                    Alpaca Format
+                  </button>
+                  <button
+                    onClick={() => setExportFormat("rag_chunks")}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${exportFormat === "rag_chunks" ? "bg-emerald-600 text-white shadow" : "text-slate-400 hover:text-white"}`}
+                  >
+                    RAG Chunks / Vector
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-300">Domain Filter:</span>
+                <select
+                  value={exportDomain}
+                  onChange={(e) => setExportDomain(e.target.value as any)}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="all">All Refined Domains</option>
+                  <option value="developer">Developer Breaking Changes</option>
+                  <option value="pricing">B2B SaaS Pricing Matrices</option>
+                  <option value="regulatory">Regulatory & Permits</option>
+                  <option value="custom">Custom Schemas</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Live Dataset Preview */}
+            <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <FileCode className="w-4 h-4 text-blue-400" />
+                  <h3 className="text-sm font-bold text-white">Live Training Dataset Stream ({exportCount} records)</h3>
+                </div>
+                <button
+                  onClick={fetchFineTuningDataset}
+                  className="px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 flex items-center gap-1"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${exportLoading ? "animate-spin text-blue-400" : ""}`} />
+                  Refresh
+                </button>
+              </div>
+
+              <div className="relative">
+                <pre className="bg-slate-950 rounded-xl p-4 text-xs font-mono text-cyan-200 max-h-96 overflow-x-auto overflow-y-auto border border-slate-800/80 leading-relaxed">
+                  {exportDataset.slice(0, 10).map((row, i) => JSON.stringify(row)).join("\n\n")}
+                </pre>
+                <button
+                  onClick={() => {
+                    const text = exportDataset.map((row) => JSON.stringify(row)).join("\n");
+                    navigator.clipboard.writeText(text);
+                    alert("Dataset copied to clipboard!");
+                  }}
+                  className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs flex items-center gap-1 transition-colors"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy All</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Universal Chrome Extension & Enterprise SLA Banner */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Chrome Extension Card */}
+              <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                    <Globe className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Universal Chrome & Brave Extension</h3>
+                    <p className="text-xs text-slate-400">1-Click Page Distiller (Manifest V3)</p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-300">
+                  Install the official extension to distill any active webpage into structured JSON machine fuel with 1 click directly from your browser toolbar.
+                </p>
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-400 space-y-1">
+                  <div>📁 Package Directory: <span className="text-teal-300">packages/extension</span></div>
+                  <div>⚡ Supports: Chrome, Brave, Edge, Opera (Manifest V3)</div>
+                </div>
+              </div>
+
+              {/* Enterprise 99.99% SLA Health Card */}
+              <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <Server className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white">Enterprise 99.99% SLA Telemetry</h3>
+                      <p className="text-xs text-slate-400">Cloudflare Edge Points-of-Presence</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    99.998% UPTIME
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+                  <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                    <div className="text-slate-500 text-[10px]">Active PoPs</div>
+                    <div className="text-emerald-400 font-bold text-sm">330 Cities</div>
+                  </div>
+                  <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                    <div className="text-slate-500 text-[10px]">p50 Latency</div>
+                    <div className="text-cyan-400 font-bold text-sm">12ms</div>
+                  </div>
+                  <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                    <div className="text-slate-500 text-[10px]">Security</div>
+                    <div className="text-purple-400 font-bold text-sm">TLS 1.3 / AES</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 7: UNIVERSAL ON-DEMAND REFINER PLAYGROUND */}
         {activeTab === "playground" && (
           <div className="space-y-6">
             <div>

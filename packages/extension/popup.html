@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Refinery</title>
+  <style>
+    body {
+      width: 360px;
+      margin: 0;
+      padding: 16px;
+      background-color: #080d1a;
+      color: #f1f5f9;
+      font-family: system-ui, -apple-system, sans-serif;
+      box-sizing: border-box;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+    .title {
+      font-size: 14px;
+      font-weight: 800;
+      background: linear-gradient(90deg, #f97316, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .badge {
+      font-size: 10px;
+      font-family: monospace;
+      padding: 2px 6px;
+      border-radius: 9999px;
+      background: rgba(249, 115, 22, 0.15);
+      color: #fb923c;
+      border: 1px solid rgba(249, 115, 22, 0.3);
+    }
+    .url-box {
+      font-size: 11px;
+      font-family: monospace;
+      color: #94a3b8;
+      background: #0f172a;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 12px;
+    }
+    .input-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin-bottom: 4px;
+      display: block;
+    }
+    textarea, select {
+      width: 100%;
+      box-sizing: border-box;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      color: #f8fafc;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 11px;
+      margin-bottom: 12px;
+      font-family: inherit;
+    }
+    textarea:focus, select:focus {
+      outline: none;
+      border-color: #f97316;
+    }
+    .btn-refine {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      background: linear-gradient(90deg, #f97316, #06b6d4);
+      color: #020617;
+      font-weight: 800;
+      font-size: 12px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: opacity 0.2s;
+    }
+    .btn-refine:hover {
+      opacity: 0.9;
+    }
+    .btn-refine:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .result-container {
+      margin-top: 14px;
+      display: none;
+    }
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 6px;
+    }
+    pre {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 10px;
+      font-family: monospace;
+      color: #34d399;
+      max-height: 180px;
+      overflow-y: auto;
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .btn-copy {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="title">DATA REFINERY</span>
+    <span class="badge">Workers AI v3.3</span>
+  </div>
+
+  <span class="input-label">Current Active Webpage:</span>
+  <div id="pageUrl" class="url-box">Detecting active tab...</div>
+
+  <span class="input-label">Extraction Schema / Target:</span>
+  <select id="domainSelect">
+    <option value="custom">Universal On-Demand Extraction</option>
+    <option value="developer">Developer SDK Breaking Changes</option>
+    <option value="pricing">B2B SaaS Pricing Matrix</option>
+    <option value="regulatory">Regulatory & Municipal Rules</option>
+  </select>
+
+  <span class="input-label">AI Extraction Guidance Prompt:</span>
+  <textarea id="promptInput" rows="2" placeholder="Extract key facts, pricing, API changes, or compliance rules into structured JSON..."></textarea>
+
+  <button id="btnRefine" class="btn-refine">
+    <span>⚡ Refine Webpage into JSON</span>
+  </button>
+
+  <div id="resultContainer" class="result-container">
+    <div class="result-header">
+      <span>Pristine Structured JSON:</span>
+      <button id="btnCopy" class="btn-copy">Copy JSON</button>
+    </div>
+    <pre id="jsonOutput"></pre>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
