@@ -57,6 +57,107 @@ export async function fetchWebpageContent(url: string): Promise<string> {
 }
 
 /**
+ * Multi-Stage Resilient JSON Repair & Sanitizer
+ */
+export function repairAndParseJson(raw: string): any {
+  let cleaned = raw.trim();
+
+  // 1. Strip markdown code fences
+  if (cleaned.startsWith("```json")) {
+    cleaned = cleaned.replace(/^```json\s*/i, "").replace(/\s*```$/, "");
+  } else if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```\s*/, "").replace(/\s*```$/, "");
+  }
+
+  // 2. Find start of JSON structure
+  const firstBrace = cleaned.indexOf("{");
+  const firstBracket = cleaned.indexOf("[");
+  let startIdx = -1;
+  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+    startIdx = firstBrace;
+  } else if (firstBracket !== -1) {
+    startIdx = firstBracket;
+  }
+
+  if (startIdx !== -1) {
+    cleaned = cleaned.substring(startIdx);
+  }
+
+  // 3. Try standard parse first
+  try {
+    return JSON.parse(cleaned);
+  } catch (_) {
+    // Continue to repair pipeline
+  }
+
+  // 4. Strip single-line comments // ... and multi-line comments /* ... */
+  cleaned = cleaned
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*/g, "");
+
+  // 5. Strip ellipsis lines or ellipsis tokens: e.g. ", ...", "...", ", ...\n"
+  cleaned = cleaned
+    .replace(/,\s*\.\.\.\s*([\]}])/g, "$1")
+    .replace(/,\s*\.\.\./g, "")
+    .replace(/\.\.\./g, "");
+
+  // 6. Remove trailing commas before closing braces/brackets
+  cleaned = cleaned.replace(/,\s*([\]}])/g, "$1");
+
+  // 7. Try parse after cleaning
+  try {
+    return JSON.parse(cleaned);
+  } catch (_) {
+    // Continue to bracket balancing
+  }
+
+  // 8. Auto-balance unclosed quotes, brackets, and braces
+  let inString = false;
+  let isEscaped = false;
+  const stack: string[] = [];
+
+  for (let i = 0; i < cleaned.length; i++) {
+    const char = cleaned[i];
+    if (char === "\\" && inString) {
+      isEscaped = !isEscaped;
+      continue;
+    }
+    if (char === '"' && !isEscaped) {
+      inString = !inString;
+    } else if (!inString) {
+      if (char === "{") stack.push("}");
+      else if (char === "[") stack.push("]");
+      else if (char === "}" || char === "]") {
+        if (stack.length > 0 && stack[stack.length - 1] === char) {
+          stack.pop();
+        }
+      }
+    }
+    isEscaped = false;
+  }
+
+  // Close unclosed string
+  if (inString) {
+    cleaned += '"';
+  }
+
+  // Remove any trailing comma at end
+  cleaned = cleaned.trim().replace(/,\s*$/, "");
+
+  // Append missing closing brackets/braces
+  while (stack.length > 0) {
+    cleaned += stack.pop();
+  }
+
+  // Final parse attempt
+  try {
+    return JSON.parse(cleaned);
+  } catch (finalErr: any) {
+    throw new Error(`AI returned invalid JSON: ${finalErr.message}. Output was: ${raw.substring(0, 500)}`);
+  }
+}
+
+/**
  * Extract structured JSON using Cloudflare Workers AI
  */
 export async function extractStructuredData<T>(
@@ -111,27 +212,8 @@ export async function extractStructuredData<T>(
 
   const rawOutput: string = contentText;
 
-  // Clean output to extract pure JSON block if surrounded by markdown code blocks
-  let jsonString = rawOutput.trim();
-  if (jsonString.startsWith("```json")) {
-    jsonString = jsonString.replace(/^```json\s*/, "").replace(/\s*```$/, "");
-  } else if (jsonString.startsWith("```")) {
-    jsonString = jsonString.replace(/^```\s*/, "").replace(/\s*```$/, "");
-  }
-
-  // Find first '{' and last '}'
-  const firstBrace = jsonString.indexOf("{");
-  const lastBrace = jsonString.lastIndexOf("}");
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    jsonString = jsonString.substring(firstBrace, lastBrace + 1);
-  }
-
-  let parsedJson: any;
-  try {
-    parsedJson = JSON.parse(jsonString);
-  } catch (jsonErr: any) {
-    throw new Error(`AI returned invalid JSON: ${jsonErr.message}. Output was: ${rawOutput.substring(0, 500)}`);
-  }
+  // Use robust repair and parse
+  const parsedJson = repairAndParseJson(rawOutput);
 
   // Validate against Zod schema
   const validationResult = schema.safeParse(parsedJson);

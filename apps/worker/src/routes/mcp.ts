@@ -199,7 +199,7 @@ async function handleToolExecution(env: Env, toolName: string, args: Record<stri
         "SELECT structured_data FROM refined_entities WHERE domain = 'developer' ORDER BY created_at DESC LIMIT 5"
       ).all();
       if (results && results.length > 0) {
-        return results.length === 1 ? JSON.parse(results[0].structured_data) : results.map((r: any) => JSON.parse(r.structured_data));
+        return results.length === 1 ? JSON.parse(String(results[0].structured_data)) : results.map((r: any) => JSON.parse(String(r.structured_data)));
       }
       return {
         status: "not_found",
@@ -218,7 +218,7 @@ async function handleToolExecution(env: Env, toolName: string, args: Record<stri
         "SELECT structured_data FROM refined_entities WHERE domain = 'pricing' LIMIT 5"
       ).all();
       if (results && results.length > 0) {
-        return results.length === 1 ? JSON.parse(results[0].structured_data) : results.map((r: any) => JSON.parse(r.structured_data));
+        return results.length === 1 ? JSON.parse(String(results[0].structured_data)) : results.map((r: any) => JSON.parse(String(r.structured_data)));
       }
       return { status: "not_found", message: `No pricing matrix found for '${product}'` };
     }
