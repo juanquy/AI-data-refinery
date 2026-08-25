@@ -56,13 +56,32 @@ mcpRouter.post("/", async (c) => {
     });
   }
 
-  // Handle tools/list
+  // Handle tools/list with dynamic custom schemas
   if (method === "tools/list") {
+    let customTools: any[] = [];
+    try {
+      const { results: customSchemas } = await c.env.DB.prepare(
+        "SELECT name, slug, description FROM custom_schemas LIMIT 20"
+      ).all();
+
+      customTools = (customSchemas || []).map((cs: any) => ({
+        name: `refinery_custom_${cs.slug.replace(/-/g, "_")}`,
+        description: `[Custom Enterprise Schema] ${cs.description || cs.name}`,
+        inputSchema: {
+          type: "object",
+          properties: {
+            url: { type: "string", description: "Target URL to ingest and distill" }
+          },
+          required: ["url"]
+        }
+      }));
+    } catch {}
+
     return c.json({
       jsonrpc: "2.0",
       id,
       result: {
-        tools: MCP_TOOLS
+        tools: [...MCP_TOOLS, ...customTools]
       }
     });
   }
@@ -262,7 +281,40 @@ async function handleToolExecution(env: Env, toolName: string, args: Record<stri
       return extraction.data;
     }
 
-    default:
+    default: {
+      if (toolName.startsWith("refinery_custom_")) {
+        const slug = toolName.replace("refinery_custom_", "").replace(/_/g, "-");
+        const url = String(args.url || args.sourceUrl || "");
+        if (!url || !url.startsWith("http")) {
+          return { error: "Valid URL required for custom schema extraction" };
+        }
+
+        const schemaRecord: any = await env.DB.prepare(
+          "SELECT * FROM custom_schemas WHERE slug = ? OR slug LIKE ? LIMIT 1"
+        ).bind(slug, `%${slug}%`).first();
+
+        if (schemaRecord) {
+          const rawText = await fetchWebpageContent(url);
+          const fields = JSON.parse(schemaRecord.fields_json);
+          const fieldDescriptions = fields
+            .map((f: any) => `- "${f.name}" (${f.type}): ${f.description || f.name}`)
+            .join("\n");
+
+          const prompt = `Target Schema: "${schemaRecord.name}". Extract structured JSON with attributes:\n${fieldDescriptions}`;
+          const extraction = await extractStructuredData(env, rawText, prompt, z.record(z.any()));
+
+          const entityKey = `${schemaRecord.slug}_${new URL(url).hostname}`;
+          await saveRefinedEntity(env, {
+            domain: "custom",
+            entityKey,
+            structuredData: extraction.data,
+            summary: `Refined via Custom MCP Tool: ${schemaRecord.name}`
+          });
+
+          return extraction.data;
+        }
+      }
       throw new Error(`Unknown tool: ${toolName}`);
+    }
   }
 }

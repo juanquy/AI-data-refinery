@@ -37,10 +37,15 @@ import {
   Pause,
   Trash2,
   Settings2,
+  Eye,
+  Bot,
   Plus,
   Radio,
-  Eye,
-  Bot
+  Sliders,
+  FolderPlus,
+  Users,
+  Wand2,
+  FileCode
 } from "lucide-react";
 
 interface DiffItem {
@@ -85,10 +90,45 @@ interface WebhookItem {
   created_at: string;
 }
 
+interface CustomSchemaField {
+  id: string;
+  name: string;
+  type: "string" | "number" | "boolean" | "array" | "object";
+  description: string;
+  required: boolean;
+}
+
+interface CustomSchemaItem {
+  id: string;
+  workspace_id: string;
+  name: string;
+  slug: string;
+  description: string;
+  fields: CustomSchemaField[];
+  custom_system_prompt?: string;
+  is_public: number;
+  created_at: string;
+}
+
+interface WorkspaceItem {
+  id: string;
+  name: string;
+  plan: string;
+  owner_user_id: string;
+}
+
+interface WorkspaceMember {
+  id: string;
+  email: string;
+  display_name: string;
+  role: string;
+  joined_at: string;
+}
+
 const API_BASE = import.meta.env.DEV ? "" : "https://data-refinery-worker.juanquy.workers.dev";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "playground" | "mcp" | "help" | "billing" | "marketing" | "management">("diffs");
+  const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "schemas" | "playground" | "mcp" | "help" | "billing" | "marketing" | "management">("diffs");
   const [loading, setLoading] = useState(false);
   const [diffs, setDiffs] = useState<DiffItem[]>([]);
   const [devItems, setDevItems] = useState<RefinedEntity[]>([]);
@@ -101,6 +141,37 @@ export default function App() {
     custom: 0,
     recentDiffs: 1
   });
+
+  // Phase 3: Visual Schema Studio & Workspace Multi-Tenancy State
+  const [customSchemas, setCustomSchemas] = useState<CustomSchemaItem[]>([]);
+  const [schemasLoading, setSchemasLoading] = useState(false);
+  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState("ws_global_refinery");
+  const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
+  
+  // New Schema Builder Form
+  const [newSchemaName, setNewSchemaName] = useState("Real Estate & Permit Tracker");
+  const [newSchemaDesc, setNewSchemaDesc] = useState("Extracts zoning codes, square footage, permit approvals, and construction cost estimates.");
+  const [newSchemaPrompt, setNewSchemaPrompt] = useState("Extract precise municipal zoning parameters, permit numbers, and estimated valuation.");
+  const [newSchemaFields, setNewSchemaFields] = useState<CustomSchemaField[]>([
+    { id: "f1", name: "propertyAddress", type: "string", description: "Full street address of the property", required: true },
+    { id: "f2", name: "zoningClassification", type: "string", description: "Commercial, Residential, or Mixed-Use zoning code", required: true },
+    { id: "f3", name: "estimatedCostUSD", type: "number", description: "Estimated project construction or permit fee", required: false },
+    { id: "f4", name: "permitApprovalStatus", type: "string", description: "Status: APPROVED, PENDING, or DENIED", required: true }
+  ]);
+  const [savingSchema, setSavingSchema] = useState(false);
+  const [previewTab, setPreviewTab] = useState<"json" | "typescript" | "mcp">("json");
+  
+  // Custom Schema Tester
+  const [testingSchemaSlug, setTestingSchemaSlug] = useState<string | null>(null);
+  const [testSchemaUrl, setTestSchemaUrl] = useState("https://httpbin.org/json");
+  const [testSchemaResult, setTestSchemaResult] = useState<any | null>(null);
+  const [testSchemaLoading, setTestSchemaLoading] = useState(false);
+
+  // Workspace Member Invite Form
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState("BUILDER");
+  const [invitingMember, setInvitingMember] = useState(false);
 
   // Playground state
   const [targetUrl, setTargetUrl] = useState("https://example.com");
@@ -181,9 +252,201 @@ export default function App() {
     }
   };
 
+  const fetchSchemas = async () => {
+    setSchemasLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/schemas?workspaceId=${selectedWorkspace}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCustomSchemas(data.schemas || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch schemas:", err);
+    } finally {
+      setSchemasLoading(false);
+    }
+  };
+
+  const fetchWorkspaces = async () => {
+    try {
+      const [wRes, mRes] = await Promise.all([
+        fetch(`${API_BASE}/api/v1/workspaces`).then(r => r.json()),
+        fetch(`${API_BASE}/api/v1/workspaces/${selectedWorkspace}/members`).then(r => r.json())
+      ]);
+      if (wRes.status === "success") setWorkspaces(wRes.workspaces || []);
+      if (mRes.status === "success") setWorkspaceMembers(mRes.members || []);
+    } catch (err) {
+      console.error("Failed to fetch workspaces/members:", err);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchSchemas();
+    fetchWorkspaces();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "schemas") {
+      fetchSchemas();
+      fetchWorkspaces();
+    }
+  }, [activeTab, selectedWorkspace]);
+
+  // Visual Schema Field Manipulations
+  const handleAddField = () => {
+    const newId = `f_${Date.now()}`;
+    setNewSchemaFields([
+      ...newSchemaFields,
+      { id: newId, name: `field_${newSchemaFields.length + 1}`, type: "string", description: "", required: false }
+    ]);
+  };
+
+  const handleRemoveField = (id: string) => {
+    setNewSchemaFields(newSchemaFields.filter(f => f.id !== id));
+  };
+
+  const handleFieldChange = (id: string, key: keyof CustomSchemaField, val: any) => {
+    setNewSchemaFields(newSchemaFields.map(f => f.id === id ? { ...f, [key]: val } : f));
+  };
+
+  // Code Generation Helpers for Live Preview
+  const generateJsonSchema = () => {
+    const properties: any = {};
+    const required: string[] = [];
+    newSchemaFields.forEach(f => {
+      properties[f.name || "field"] = {
+        type: f.type === "array" ? "array" : f.type,
+        description: f.description || `Extracted ${f.name}`
+      };
+      if (f.type === "array") {
+        properties[f.name || "field"].items = { type: "string" };
+      }
+      if (f.required) required.push(f.name || "field");
+    });
+    return JSON.stringify({
+      $schema: "http://json-schema.org/draft-07/schema#",
+      title: newSchemaName || "CustomSchema",
+      type: "object",
+      properties,
+      required: required.length > 0 ? required : undefined
+    }, null, 2);
+  };
+
+  const generateTypeScriptTypes = () => {
+    const typeMap: Record<string, string> = {
+      string: "string",
+      number: "number",
+      boolean: "boolean",
+      array: "string[]",
+      object: "Record<string, any>"
+    };
+    const lines = newSchemaFields.map(f => {
+      const opt = f.required ? "" : "?";
+      const tsType = typeMap[f.type] || "any";
+      return `  /** ${f.description || f.name} */\n  ${f.name || "field"}${opt}: ${tsType};`;
+    });
+    const interfaceName = (newSchemaName || "CustomData").replace(/[^a-zA-Z0-9]/g, "");
+    return `export interface ${interfaceName} {\n${lines.join("\n")}\n}`;
+  };
+
+  const generateMcpToolSnippet = () => {
+    const slug = (newSchemaName || "custom-tool").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    return JSON.stringify({
+      jsonrpc: "2.0",
+      id: "agent-custom-call-1",
+      method: "tools/call",
+      params: {
+        name: `refinery_custom_${slug.replace(/-/g, "_")}`,
+        arguments: {
+          url: "https://example.com/target-document"
+        }
+      }
+    }, null, 2);
+  };
+
+  // Save Custom Schema to D1
+  const handleSaveCustomSchema = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSchemaName.trim() || newSchemaFields.length === 0) {
+      alert("Please provide a schema name and at least one field.");
+      return;
+    }
+    setSavingSchema(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/schemas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newSchemaName,
+          description: newSchemaDesc,
+          customPrompt: newSchemaPrompt,
+          workspaceId: selectedWorkspace,
+          fields: newSchemaFields
+        })
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        await fetchSchemas();
+        alert(`🎉 Custom Schema "${newSchemaName}" deployed successfully! Dynamic MCP tool provisioned.`);
+      } else {
+        alert("Failed to save schema: " + data.error);
+      }
+    } catch (err: any) {
+      alert("Save error: " + err.message);
+    } finally {
+      setSavingSchema(false);
+    }
+  };
+
+  // Run Custom Schema Test
+  const handleRunCustomSchemaTest = async (slug: string) => {
+    setTestingSchemaSlug(slug);
+    setTestSchemaLoading(true);
+    setTestSchemaResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/schemas/${slug}/refine`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceUrl: testSchemaUrl })
+      });
+      const data = await res.json();
+      setTestSchemaResult(data);
+    } catch (err: any) {
+      setTestSchemaResult({ error: err.message });
+    } finally {
+      setTestSchemaLoading(false);
+    }
+  };
+
+  // Invite Workspace Member
+  const handleInviteMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMemberEmail.trim()) return;
+    setInvitingMember(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/workspaces/${selectedWorkspace}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: newMemberEmail,
+          role: newMemberRole
+        })
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        setNewMemberEmail("");
+        await fetchWorkspaces();
+        alert(`Member invited: ${data.message}`);
+      } else {
+        alert("Invitation failed: " + data.error);
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setInvitingMember(false);
+    }
+  };
 
   const handleRefineSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -581,6 +844,21 @@ export default function App() {
 
           {/* Quick Stats & Controls */}
           <div className="flex items-center gap-3">
+            {/* Workspace Selector */}
+            <div className="hidden md:flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1.5 rounded-lg border border-slate-800 text-xs">
+              <FolderPlus className="w-3.5 h-3.5 text-cyan-400" />
+              <select
+                value={selectedWorkspace}
+                onChange={(e) => setSelectedWorkspace(e.target.value)}
+                className="bg-slate-900 text-slate-300 font-semibold focus:outline-none cursor-pointer text-xs"
+              >
+                <option value="ws_global_refinery">Primary Workspace (ENTERPRISE)</option>
+                {workspaces.map(w => (
+                  <option key={w.id} value={w.id}>{w.name} ({w.plan})</option>
+                ))}
+              </select>
+            </div>
+
             <button
               onClick={() => setActiveTab("billing")}
               className="flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
@@ -788,6 +1066,18 @@ export default function App() {
           >
             <Building2 className="w-4 h-4" />
             3. Regulatory & Permits
+          </button>
+
+          <button
+            onClick={() => setActiveTab("schemas")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === "schemas"
+                ? "bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/20"
+                : "bg-slate-900/60 text-teal-400 hover:text-teal-300 hover:bg-slate-800 border border-teal-500/20"
+            }`}
+          >
+            <Sliders className="w-4 h-4 text-teal-400" />
+            🎨 4. Visual Schema Studio
           </button>
 
           <button
@@ -1307,6 +1597,435 @@ export default function App() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: VISUAL SCHEMA STUDIO (PHASE 3) */}
+        {activeTab === "schemas" && (
+          <div className="space-y-8">
+            {/* Header */}
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <Sliders className="w-5 h-5 text-teal-400" />
+                  Visual Schema Studio & Custom Field Builder
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Build custom enterprise JSON schemas visually without code. Deployed schemas immediately provision dynamic MCP tools for autonomous AI agents.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs px-3 py-1 rounded-lg bg-teal-500/10 text-teal-300 border border-teal-500/20 font-mono">
+                  Workspace: {selectedWorkspace}
+                </span>
+                <span className="text-xs px-3 py-1 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-bold">
+                  {customSchemas.length} Active Custom Schemas
+                </span>
+              </div>
+            </div>
+
+            {/* Visual Builder + Live Dual-Pane Code Preview */}
+            <div className="grid lg:grid-cols-12 gap-6 items-start">
+              {/* Left Column: Visual Schema Editor (7 cols) */}
+              <div className="lg:col-span-7 bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="w-4 h-4 text-teal-400" />
+                    <h3 className="text-sm font-bold text-white">Visual Schema Designer</h3>
+                  </div>
+                  <span className="text-[11px] text-slate-400">No-code extraction definition</span>
+                </div>
+
+                <form onSubmit={handleSaveCustomSchema} className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-300">Schema Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={newSchemaName}
+                        onChange={(e) => setNewSchemaName(e.target.value)}
+                        placeholder="e.g. Clinical Trial Protocols, Commercial Permits"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-300">Description</label>
+                      <input
+                        type="text"
+                        value={newSchemaDesc}
+                        onChange={(e) => setNewSchemaDesc(e.target.value)}
+                        placeholder="Brief summary of what this schema extracts"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-300">Extraction Guidance Prompt (Optional)</label>
+                    <textarea
+                      rows={2}
+                      value={newSchemaPrompt}
+                      onChange={(e) => setNewSchemaPrompt(e.target.value)}
+                      placeholder="Special instructions for Workers AI during distillation..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-teal-500 font-mono resize-none"
+                    />
+                  </div>
+
+                  {/* Dynamic Fields List */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                        Schema Fields & Types ({newSchemaFields.length})
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAddField}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-bold transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add Custom Field
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                      {newSchemaFields.map((field, idx) => (
+                        <div key={field.id} className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 space-y-2">
+                          <div className="grid grid-cols-12 gap-2 items-center">
+                            <div className="col-span-5">
+                              <input
+                                type="text"
+                                value={field.name}
+                                onChange={(e) => handleFieldChange(field.id, "name", e.target.value)}
+                                placeholder="fieldName"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-teal-300 font-mono focus:outline-none focus:border-teal-500"
+                              />
+                            </div>
+                            <div className="col-span-4">
+                              <select
+                                value={field.type}
+                                onChange={(e) => handleFieldChange(field.id, "type", e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-teal-500 cursor-pointer"
+                              >
+                                <option value="string">Text (string)</option>
+                                <option value="number">Number</option>
+                                <option value="boolean">Boolean</option>
+                                <option value="array">Array (list)</option>
+                                <option value="object">Nested Object</option>
+                              </select>
+                            </div>
+                            <div className="col-span-2 flex items-center justify-center">
+                              <label className="flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={field.required}
+                                  onChange={(e) => handleFieldChange(field.id, "required", e.target.checked)}
+                                  className="rounded bg-slate-900 border-slate-700 text-teal-500 focus:ring-0"
+                                />
+                                Req.
+                              </label>
+                            </div>
+                            <div className="col-span-1 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveField(field.id)}
+                                className="p-1 rounded text-slate-500 hover:text-red-400 transition-colors"
+                                title="Remove Field"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            value={field.description}
+                            onChange={(e) => handleFieldChange(field.id, "description", e.target.value)}
+                            placeholder="Field extraction description or format hint..."
+                            className="w-full bg-slate-900/60 border border-slate-800/60 rounded-lg px-2.5 py-1 text-[11px] text-slate-300 placeholder-slate-600 focus:outline-none focus:border-slate-700"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-800 flex items-center justify-end">
+                    <button
+                      type="submit"
+                      disabled={savingSchema}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-400 hover:to-cyan-500 text-slate-950 font-extrabold text-xs shadow-lg shadow-teal-500/20 transition-all cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>{savingSchema ? "Deploying Schema..." : "✨ Deploy Custom Schema & Provision MCP Tool"}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Right Column: Live Code Generator Preview (5 cols) */}
+              <div className="lg:col-span-5 bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileCode className="w-4 h-4 text-cyan-400" />
+                    <h3 className="text-sm font-bold text-white">Live Code & Protocol Preview</h3>
+                  </div>
+                  <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                    <button
+                      onClick={() => setPreviewTab("json")}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${previewTab === "json" ? "bg-teal-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+                    >
+                      JSON Schema
+                    </button>
+                    <button
+                      onClick={() => setPreviewTab("typescript")}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${previewTab === "typescript" ? "bg-cyan-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+                    >
+                      TypeScript
+                    </button>
+                    <button
+                      onClick={() => setPreviewTab("mcp")}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${previewTab === "mcp" ? "bg-purple-500 text-white" : "text-slate-400 hover:text-white"}`}
+                    >
+                      MCP Tool Call
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <pre className="bg-slate-950 rounded-xl p-4 text-xs font-mono text-cyan-300 max-h-96 overflow-x-auto overflow-y-auto border border-slate-800/80 leading-relaxed">
+                    {previewTab === "json" && generateJsonSchema()}
+                    {previewTab === "typescript" && generateTypeScriptTypes()}
+                    {previewTab === "mcp" && generateMcpToolSnippet()}
+                  </pre>
+                  <button
+                    onClick={() => {
+                      const code = previewTab === "json" ? generateJsonSchema() : previewTab === "typescript" ? generateTypeScriptTypes() : generateMcpToolSnippet();
+                      navigator.clipboard.writeText(code);
+                      alert("Code copied to clipboard!");
+                    }}
+                    className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs flex items-center gap-1 transition-colors"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 space-y-1">
+                  <div className="font-bold text-slate-300 flex items-center gap-1.5">
+                    <Bot className="w-3.5 h-3.5 text-purple-400" />
+                    Autonomous Agent Integration:
+                  </div>
+                  <p className="text-[11px]">
+                    Once deployed, AI agents in Cursor, Claude Desktop, or LangGraph can invoke:
+                  </p>
+                  <code className="text-teal-300 text-[11px] font-mono block bg-slate-900 p-1.5 rounded">
+                    refinery_custom_{(newSchemaName || "custom").toLowerCase().replace(/[^a-z0-9]+/g, "_")}
+                  </code>
+                </div>
+              </div>
+            </div>
+
+            {/* Custom Schema Library & Live Tester */}
+            <div className="space-y-4 pt-4 border-t border-slate-800/80">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Database className="w-4 h-4 text-teal-400" />
+                    Deployed Custom Schema Catalog ({customSchemas.length})
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Live enterprise schemas available for on-demand edge distillation and MCP tool calls.
+                  </p>
+                </div>
+                <button
+                  onClick={fetchSchemas}
+                  className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-xs text-slate-300 flex items-center gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${schemasLoading ? "animate-spin text-teal-400" : ""}`} />
+                  Refresh Catalog
+                </button>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                {customSchemas.map((schema) => (
+                  <div key={schema.id} className="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 space-y-4 hover:border-teal-500/40 transition-colors shadow-lg">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                          {schema.name}
+                        </h4>
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-teal-500/10 text-teal-300 border border-teal-500/20">
+                          slug: {schema.slug}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-900 text-slate-300 border border-slate-800">
+                        {schema.fields?.length || 0} fields
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-300">{schema.description}</p>
+
+                    {/* Field Tags */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {schema.fields?.map((f: any, i: number) => (
+                        <span key={i} className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800">
+                          {f.name}: <span className="text-cyan-400">{f.type}</span>
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* MCP Tool Name Callout */}
+                    <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 truncate">
+                        <Terminal className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                        <span className="font-mono text-[11px] text-purple-300 truncate">
+                          refinery_custom_{schema.slug.replace(/-/g, "_")}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleRunCustomSchemaTest(schema.slug)}
+                        className="px-3 py-1 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-400 hover:to-cyan-500 text-slate-950 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer flex-shrink-0"
+                      >
+                        <Zap className="w-3 h-3" />
+                        Test Extraction
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Inline Custom Schema Live Test Runner Modal / Box */}
+            {testingSchemaSlug && (
+              <div className="bg-[#0b1120] border border-teal-500/40 rounded-2xl p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-teal-400" />
+                    <div>
+                      <h3 className="text-sm font-bold text-white">Live Extraction Tester: &ldquo;{testingSchemaSlug}&rdquo;</h3>
+                      <p className="text-[11px] text-slate-400">Testing real-time distillation against live web target</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setTestingSchemaSlug(null)}
+                    className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="url"
+                    value={testSchemaUrl}
+                    onChange={(e) => setTestSchemaUrl(e.target.value)}
+                    placeholder="https://example.com/target-webpage"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-teal-500"
+                  />
+                  <button
+                    onClick={() => handleRunCustomSchemaTest(testingSchemaSlug)}
+                    disabled={testSchemaLoading}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 text-slate-950 font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${testSchemaLoading ? "animate-spin" : ""}`} />
+                    <span>{testSchemaLoading ? "Refining with Llama 3.3..." : "Run Test Extraction"}</span>
+                  </button>
+                </div>
+
+                {testSchemaResult && (
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-bold text-teal-400 uppercase tracking-wider flex items-center justify-between">
+                      <span>Extraction Results (Duration: {testSchemaResult.durationMs || 120}ms)</span>
+                      <span className="text-slate-400 font-mono text-[10px]">Status: {testSchemaResult.status}</span>
+                    </div>
+                    <pre className="bg-slate-950 rounded-xl p-4 text-xs font-mono text-teal-200 border border-slate-800 max-h-72 overflow-y-auto">
+                      {JSON.stringify(testSchemaResult.structuredData || testSchemaResult, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Enterprise Multi-Tenant Team Workspaces & RBAC Card */}
+            <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-6 shadow-xl">
+              <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Enterprise Workspace Team & Access Control</h3>
+                    <p className="text-xs text-slate-400">Manage team member roles and permissions for workspace &ldquo;{selectedWorkspace}&rdquo;</p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Enterprise RBAC Active
+                </span>
+              </div>
+
+              {/* Team Members List */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <div className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Active Workspace Members ({workspaceMembers.length || 1})
+                  </div>
+                  <div className="space-y-2">
+                    <div className="bg-slate-950 rounded-xl p-3 flex items-center justify-between border border-slate-800">
+                      <div>
+                        <div className="text-xs font-bold text-white">founder@freshbeats.ai</div>
+                        <div className="text-[10px] text-slate-400">Lead Founder • Owner</div>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                        OWNER
+                      </span>
+                    </div>
+
+                    {workspaceMembers.map((m, idx) => (
+                      <div key={idx} className="bg-slate-950 rounded-xl p-3 flex items-center justify-between border border-slate-800">
+                        <div>
+                          <div className="text-xs font-bold text-white">{m.email}</div>
+                          <div className="text-[10px] text-slate-400">{m.display_name || "Team Member"}</div>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                          {m.role}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Member Invite Form */}
+                <form onSubmit={handleInviteMember} className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-3">
+                  <div className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Invite New Team Member
+                  </div>
+                  <div className="space-y-2">
+                    <input
+                      type="email"
+                      required
+                      value={newMemberEmail}
+                      onChange={(e) => setNewMemberEmail(e.target.value)}
+                      placeholder="engineer@company.com"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+                    />
+                    <select
+                      value={newMemberRole}
+                      onChange={(e) => setNewMemberRole(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                    >
+                      <option value="ADMIN">ADMIN (Full Access & Billing)</option>
+                      <option value="BUILDER">BUILDER (Create & Edit Custom Schemas)</option>
+                      <option value="VIEWER">VIEWER (Read-Only API / MCP Access)</option>
+                    </select>
+                    <button
+                      type="submit"
+                      disabled={invitingMember}
+                      className="w-full py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs transition-all shadow cursor-pointer"
+                    >
+                      {invitingMember ? "Sending Invite..." : "Send Workspace Invite"}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         )}
