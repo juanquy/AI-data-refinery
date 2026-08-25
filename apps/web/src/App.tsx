@@ -294,27 +294,37 @@ export default function App() {
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [adminPasscodeInput, setAdminPasscodeInput] = useState("");
   const [adminError, setAdminError] = useState<string | null>(null);
+  const [adminVerifying, setAdminVerifying] = useState(false);
 
-  const handleUnlockAdmin = (e: React.FormEvent) => {
+  const handleUnlockAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const code = adminPasscodeInput.trim().toLowerCase();
-    if (
-      code === "founder" ||
-      code === "refinery2026" ||
-      code === "admin" ||
-      code.startsWith("rf_live_") ||
-      code.startsWith("rf_test_") ||
-      code.startsWith("ref_agent_")
-    ) {
-      try {
-        localStorage.setItem("refinery_admin_unlocked", "true");
-      } catch {}
-      setIsAdminUnlocked(true);
-      setAdminModalOpen(false);
-      setAdminPasscodeInput("");
-      setAdminError(null);
-    } else {
-      setAdminError("Invalid Founder Passcode or API Key. Try again.");
+    const code = adminPasscodeInput.trim();
+    if (!code) return;
+    setAdminVerifying(true);
+    setAdminError(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/management/verify-admin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passcode: code })
+      });
+      const data = await res.json();
+      if (data.valid) {
+        try {
+          localStorage.setItem("refinery_admin_unlocked", "true");
+        } catch {}
+        setIsAdminUnlocked(true);
+        setAdminModalOpen(false);
+        setAdminPasscodeInput("");
+        setAdminError(null);
+      } else {
+        setAdminError(data.error || "Invalid Founder Passcode or API Key. Try again.");
+      }
+    } catch (err: any) {
+      setAdminError("Verification failed: " + err.message);
+    } finally {
+      setAdminVerifying(false);
     }
   };
 

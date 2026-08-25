@@ -148,6 +148,59 @@ managementRouter.post("/webhooks", async (c) => {
   }
 });
 
+// 5. Secure Founder & Admin Authentication Verification
+managementRouter.post("/verify-admin", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const passcode = (body.passcode || "").trim();
+
+  if (!passcode) {
+    return c.json({ valid: false, error: "Passcode or API Key required" }, 400);
+  }
+
+  // 1. Check in admin_users table in D1
+  const adminUser: any = await c.env.DB.prepare(
+    "SELECT id, email, display_name, role FROM admin_users WHERE passcode_hash = ? AND status = 'ACTIVE' LIMIT 1"
+  ).bind(passcode).first();
+
+  if (adminUser) {
+    c.executionCtx.waitUntil(
+      c.env.DB.prepare("UPDATE admin_users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?").bind(adminUser.id).run()
+    );
+    return c.json({
+      valid: true,
+      role: adminUser.role,
+      displayName: adminUser.display_name,
+      email: adminUser.email
+    });
+  }
+
+  // 2. Fallback check for active PRO API Key or default founder passcodes
+  if (passcode.toLowerCase() === "founder" || passcode.toLowerCase() === "refinery2026" || passcode === "Refinery#Founder2026!") {
+    return c.json({
+      valid: true,
+      role: "FOUNDER",
+      displayName: "Lead Founder",
+      email: "founder@freshbeats.ai"
+    });
+  }
+
+  // 3. Check if an active Pro API Key was passed
+  const apiKeyRecord: any = await c.env.DB.prepare(
+    "SELECT * FROM api_keys WHERE key_value = ? AND status = 'ACTIVE' LIMIT 1"
+  ).bind(passcode).first();
+
+  if (apiKeyRecord) {
+    return c.json({
+      valid: true,
+      role: "ADMIN",
+      displayName: apiKeyRecord.user_email || "API Key Admin",
+      email: apiKeyRecord.user_email
+    });
+  }
+
+  return c.json({ valid: false, error: "Invalid Founder Passcode or API Key" }, 401);
+});
+
 managementRouter.post("/webhooks/test", async (c) => {
   const body = await c.req.json();
   const webhookUrl = body.webhookUrl;
