@@ -50,15 +50,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
     if (!ctx) return;
 
     let animationFrameId: number;
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
 
+    let lastResize = Date.now();
     const handleResize = () => {
       if (!canvas) return;
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
+      // Debounce resize to prevent iOS Safari address-bar scroll freezing
+      if (Date.now() - lastResize < 200) return;
+      lastResize = Date.now();
+      if (Math.abs(canvas.width - window.innerWidth) > 40 || Math.abs(canvas.height - window.innerHeight) > 100) {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      }
     };
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", handleResize, { passive: true });
 
     // Particle types: RAW_CHAOS (left, red/amber), REFINING (center, vortex), PRISTINE_FUEL (right, cyan/emerald)
     interface Particle {
@@ -77,20 +84,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
     const pristineGlyphs = ["JSON", "schema", "200_OK", "verified", "AST_diff", "MCP_tool", "price_tier", "zoning_code"];
 
     const particles: Particle[] = [];
-    const numParticles = 80;
+    const numParticles = isMobile ? 25 : 65;
 
     for (let i = 0; i < numParticles; i++) {
       const isLeft = Math.random() > 0.45;
       particles.push({
         x: isLeft ? Math.random() * (width * 0.45) : width * 0.55 + Math.random() * (width * 0.45),
         y: Math.random() * height,
-        vx: isLeft ? 0.4 + Math.random() * 1.2 : 0.8 + Math.random() * 1.5,
-        vy: (Math.random() - 0.5) * 0.8,
-        size: 2 + Math.random() * 2.5,
+        vx: isLeft ? 0.4 + Math.random() * 1.0 : 0.7 + Math.random() * 1.2,
+        vy: (Math.random() - 0.5) * 0.6,
+        size: isMobile ? 1.5 + Math.random() * 1.5 : 2 + Math.random() * 2.5,
         stage: isLeft ? "CHAOS" : "PRISTINE",
         color: isLeft ? (Math.random() > 0.5 ? "#f97316" : "#ef4444") : (Math.random() > 0.5 ? "#06b6d4" : "#10b981"),
         label: isLeft ? chaoticGlyphs[Math.floor(Math.random() * chaoticGlyphs.length)] : pristineGlyphs[Math.floor(Math.random() * pristineGlyphs.length)],
-        alpha: 0.3 + Math.random() * 0.7
+        alpha: 0.3 + Math.random() * 0.6
       });
     }
 
@@ -100,18 +107,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
       ctx.clearRect(0, 0, width, height);
 
       const coreX = width * 0.5;
-      const coreY = height * 0.42;
+      const coreY = isMobile ? height * 0.35 : height * 0.42;
       coreRotation += 0.015;
 
       // Draw Refinery Reactor Core Glow & Concentric Rings
-      const grad = ctx.createRadialGradient(coreX, coreY, 20, coreX, coreY, 280);
-      grad.addColorStop(0, "rgba(249, 115, 22, 0.35)");
-      grad.addColorStop(0.4, "rgba(245, 158, 11, 0.2)");
-      grad.addColorStop(0.7, "rgba(6, 182, 212, 0.15)");
+      const gradRadius = isMobile ? 180 : 280;
+      const grad = ctx.createRadialGradient(coreX, coreY, 20, coreX, coreY, gradRadius);
+      grad.addColorStop(0, "rgba(249, 115, 22, 0.3)");
+      grad.addColorStop(0.4, "rgba(245, 158, 11, 0.15)");
+      grad.addColorStop(0.7, "rgba(6, 182, 212, 0.1)");
       grad.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(coreX, coreY, 280, 0, Math.PI * 2);
+      ctx.arc(coreX, coreY, gradRadius, 0, Math.PI * 2);
       ctx.fill();
 
       // Rotating Outer Reactor Ring
@@ -119,40 +127,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
       ctx.translate(coreX, coreY);
       ctx.rotate(coreRotation);
       ctx.strokeStyle = "rgba(249, 115, 22, 0.4)";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1.8;
       ctx.setLineDash([12, 14]);
       ctx.beginPath();
-      ctx.arc(0, 0, 190, 0, Math.PI * 2);
+      ctx.arc(0, 0, isMobile ? 130 : 190, 0, Math.PI * 2);
       ctx.stroke();
 
       // Rotating Middle Ring
       ctx.rotate(-coreRotation * 2.2);
       ctx.strokeStyle = "rgba(6, 182, 212, 0.5)";
-      ctx.lineWidth = 1.8;
+      ctx.lineWidth = 1.5;
       ctx.setLineDash([16, 10]);
       ctx.beginPath();
-      ctx.arc(0, 0, 135, 0, Math.PI * 2);
+      ctx.arc(0, 0, isMobile ? 90 : 135, 0, Math.PI * 2);
       ctx.stroke();
 
       // Rotating Inner Ring
       ctx.rotate(coreRotation * 1.5);
       ctx.strokeStyle = "rgba(245, 158, 11, 0.6)";
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.2;
       ctx.setLineDash([6, 8]);
       ctx.beginPath();
-      ctx.arc(0, 0, 85, 0, Math.PI * 2);
+      ctx.arc(0, 0, isMobile ? 55 : 85, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
 
       // Update & Draw Particles
-      particles.forEach((p, idx) => {
+      for (let idx = 0; idx < particles.length; idx++) {
+        const p = particles[idx];
         // Move towards core if in CHAOS and crossing threshold
         if (p.stage === "CHAOS" && p.x > width * 0.42 && p.x < width * 0.52) {
           // Transmute into pristine data stream!
           p.stage = "PRISTINE";
           p.color = Math.random() > 0.5 ? "#06b6d4" : "#10b981";
           p.label = pristineGlyphs[Math.floor(Math.random() * pristineGlyphs.length)];
-          p.vx = 1.2 + Math.random() * 1.4;
+          p.vx = 1.0 + Math.random() * 1.2;
         }
 
         p.x += p.vx;
@@ -165,7 +174,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
           p.stage = "CHAOS";
           p.color = Math.random() > 0.5 ? "#f97316" : "#ef4444";
           p.label = chaoticGlyphs[Math.floor(Math.random() * chaoticGlyphs.length)];
-          p.vx = 0.5 + Math.random() * 1.2;
+          p.vx = 0.5 + Math.random() * 1.0;
         }
 
         // Draw node
@@ -175,22 +184,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
         ctx.globalAlpha = p.alpha;
         ctx.fill();
 
-        // Draw glyph label
-        if (idx % 3 === 0 && p.label) {
+        // Draw glyph label (only on desktop or subset to preserve iOS FPS)
+        if (!isMobile && idx % 3 === 0 && p.label) {
           ctx.font = "9px 'JetBrains Mono', monospace";
           ctx.fillStyle = p.color;
           ctx.fillText(p.label, p.x + 6, p.y + 3);
         }
 
-        // Connect nearby pristine particles with laser lattices
-        if (p.stage === "PRISTINE") {
+        // Connect nearby pristine particles with laser lattices (desktop only)
+        if (!isMobile && p.stage === "PRISTINE") {
           for (let j = idx + 1; j < particles.length; j++) {
             const p2 = particles[j];
             if (p2.stage === "PRISTINE") {
               const dx = p.x - p2.x;
               const dy = p.y - p2.y;
               const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < 90) {
+              if (dist < 80) {
                 ctx.beginPath();
                 ctx.moveTo(p.x, p.y);
                 ctx.lineTo(p2.x, p2.y);
@@ -201,7 +210,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
             }
           }
         }
-      });
+      }
 
       ctx.globalAlpha = 1.0;
       animationFrameId = requestAnimationFrame(render);
@@ -221,8 +230,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
       <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0" />
 
       {/* Radial Ambient Backdrops */}
-      <div className="fixed top-0 left-0 w-[500px] h-[500px] bg-orange-600/10 rounded-full blur-[140px] pointer-events-none z-0" />
-      <div className="fixed bottom-0 right-0 w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[160px] pointer-events-none z-0" />
+      <div className="fixed top-0 left-0 w-72 sm:w-[500px] h-72 sm:h-[500px] bg-orange-600/10 rounded-full blur-3xl sm:blur-[140px] pointer-events-none z-0 transform-gpu" />
+      <div className="fixed bottom-0 right-0 w-72 sm:w-[600px] h-72 sm:h-[600px] bg-cyan-600/10 rounded-full blur-3xl sm:blur-[160px] pointer-events-none z-0 transform-gpu" />
 
       {/* Top Navbar */}
       <header className="relative z-20 border-b border-slate-800/60 bg-[#070b16]/70 backdrop-blur-xl sticky top-0">

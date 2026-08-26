@@ -385,13 +385,15 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchData();
-    fetchSchemas();
-    fetchWorkspaces();
-    fetchMarketplaceListings();
-    fetchFineTuningDataset();
-    fetchSlaHealth();
-  }, []);
+    if (currentView === "studio") {
+      fetchData();
+      fetchSchemas();
+      fetchWorkspaces();
+      fetchMarketplaceListings();
+      fetchFineTuningDataset();
+      fetchSlaHealth();
+    }
+  }, [currentView]);
 
   useEffect(() => {
     if (activeTab === "schemas") {
