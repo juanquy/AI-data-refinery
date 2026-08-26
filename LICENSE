@@ -1,0 +1,27 @@
+Business Source License 1.1
+
+Parameters:
+
+Licensor: Universal Data Refinery (https://drefinery.freshbeats.ai / FreshBeats.ai)
+Licensed Work: Universal Data Refinery Core, Worker API, MCP Server, and Studio UI
+Change Date: 2030-01-01
+Change License: Apache License, Version 2.0
+
+Additional Use Grant:
+You may use, copy, modify, integrate, and run the Licensed Work for internal development, testing, research, and non-commercial purposes.
+
+You may NOT make the functionality of the Licensed Work available to third parties as a hosted cloud service, managed service, API platform, SaaS product, or commercial software offering that competes directly with the Universal Data Refinery or its authorized services.
+
+--------------------------------------------------------------------------------
+
+Text of the Business Source License 1.1:
+
+The Licensor hereby grants you the right to copy, modify, create derivative works, redistribute, and make non-production use of the Licensed Work. The Licensor also grants you the right to make Production use of the Licensed Work solely pursuant to the Additional Use Grant above.
+
+Any use of the Licensed Work in violation of your grant will automatically terminate your rights under this License for the current and all other versions of the Licensed Work.
+
+This License does not grant you any right to use the Licensor's trademarks, trade names, or service marks.
+
+As of the Change Date, or as of such earlier date as may be specified by the Licensor, this License will automatically convert into the Change License specified above without any further action on your part, and this License will automatically terminate.
+
+THE LICENSED WORK AND ALL PORTIONS THEREOF ARE PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE LICENSED WORK OR THE USE OR OTHER DEALINGS IN THE LICENSED WORK.

@@ -23,8 +23,8 @@
     "vectorize",
     "d1"
   ],
-  "author": "",
-  "license": "MIT",
+  "author": "FreshBeats.ai",
+  "license": "BUSL-1.1",
   "devDependencies": {
     "concurrently": "^9.1.2",
     "typescript": "^5.8.2"
