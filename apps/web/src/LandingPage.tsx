@@ -104,31 +104,43 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
       coreRotation += 0.015;
 
       // Draw Refinery Reactor Core Glow & Concentric Rings
-      const grad = ctx.createRadialGradient(coreX, coreY, 10, coreX, coreY, 180);
-      grad.addColorStop(0, "rgba(249, 115, 22, 0.25)");
-      grad.addColorStop(0.5, "rgba(6, 182, 212, 0.15)");
+      const grad = ctx.createRadialGradient(coreX, coreY, 20, coreX, coreY, 280);
+      grad.addColorStop(0, "rgba(249, 115, 22, 0.35)");
+      grad.addColorStop(0.4, "rgba(245, 158, 11, 0.2)");
+      grad.addColorStop(0.7, "rgba(6, 182, 212, 0.15)");
       grad.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(coreX, coreY, 180, 0, Math.PI * 2);
+      ctx.arc(coreX, coreY, 280, 0, Math.PI * 2);
       ctx.fill();
 
-      // Rotating Reactor Rings
+      // Rotating Outer Reactor Ring
       ctx.save();
       ctx.translate(coreX, coreY);
       ctx.rotate(coreRotation);
-      ctx.strokeStyle = "rgba(249, 115, 22, 0.3)";
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([8, 12]);
+      ctx.strokeStyle = "rgba(249, 115, 22, 0.4)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([12, 14]);
       ctx.beginPath();
-      ctx.arc(0, 0, 110, 0, Math.PI * 2);
+      ctx.arc(0, 0, 190, 0, Math.PI * 2);
       ctx.stroke();
 
+      // Rotating Middle Ring
       ctx.rotate(-coreRotation * 2.2);
-      ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
-      ctx.setLineDash([12, 8]);
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.5)";
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([16, 10]);
       ctx.beginPath();
-      ctx.arc(0, 0, 75, 0, Math.PI * 2);
+      ctx.arc(0, 0, 135, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Rotating Inner Ring
+      ctx.rotate(coreRotation * 1.5);
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.6)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 8]);
+      ctx.beginPath();
+      ctx.arc(0, 0, 85, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
 
@@ -289,13 +301,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
 
         {/* Hero Logo Type & 3D Typography */}
         <div className="space-y-4 max-w-4xl">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-8">
             <div className="relative group cursor-pointer" onClick={() => onEnterStudio("diffs")}>
-              <div className="absolute -inset-4 bg-gradient-to-r from-orange-500 via-amber-500 to-cyan-500 rounded-3xl opacity-30 group-hover:opacity-60 blur-xl transition-all duration-700"></div>
+              {/* Massive Ambient Energy Halo */}
+              <div className="absolute -inset-10 bg-gradient-to-r from-orange-500/40 via-amber-500/30 to-cyan-500/40 rounded-full blur-3xl opacity-70 group-hover:opacity-100 transition-all duration-700 animate-pulse"></div>
+              
+              {/* Concentric Orbital Glow Rings */}
+              <div className="absolute -inset-6 rounded-full border border-orange-500/30 border-dashed animate-spin duration-[25000ms]"></div>
+              <div className="absolute -inset-12 rounded-full border border-cyan-500/25 border-dashed animate-spin duration-[35000ms] [animation-direction:reverse]"></div>
+
+              {/* High-Resolution Centered Logo */}
               <img
                 src="/logo.png"
-                alt="Refinery Mark"
-                className="w-24 sm:w-32 h-auto object-contain relative z-10 animate-pulse-glow"
+                alt="Refinery Logo Mark"
+                className="w-48 sm:w-64 md:w-80 lg:w-96 h-auto object-contain relative z-10 drop-shadow-[0_0_35px_rgba(244,129,32,0.85)] drop-shadow-[0_0_70px_rgba(6,182,212,0.5)] transform group-hover:scale-105 transition-all duration-500 animate-pulse-glow"
               />
             </div>
           </div>
