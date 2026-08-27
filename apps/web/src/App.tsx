@@ -296,6 +296,24 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
       { id: "f6", name: "criticalRiskFactors", type: "array", description: "Primary macroeconomic and technological risk factors", required: true },
       { id: "f7", name: "forwardGuidanceSummary", type: "string", description: "Executive forward guidance summary", required: false }
     ]
+  },
+  {
+    id: "health-insurance-prior-auth",
+    badge: "🩺 Health Insurance & Prior-Auth",
+    acv: "$50k–$250k/yr",
+    name: "Health Plan Clinical Policies & Prior-Auth Criteria",
+    description: "Extracts CPT procedure codes, mandatory conservative therapy weeks, required clinical trial criteria, drug formulary tiers, and immediate approval red flags for claims AI agents.",
+    prompt: "Extract procedure CPT codes, mandatory prior conservative therapies, required clinical documentation, drug formulary tiers, and immediate approval red flags for health insurance prior authorization.",
+    fields: [
+      { id: "f1", name: "cptProcedureOrHcpcsCode", type: "string", description: "CPT or HCPCS code (e.g. 72148, 99214, J9355)", required: true },
+      { id: "f2", name: "procedureOrDrugName", type: "string", description: "Name of medical procedure, surgery, or specialty drug", required: true },
+      { id: "f3", name: "priorConservativeTherapyWeeks", type: "number", description: "Number of weeks of conservative therapy required (e.g. 6)", required: false },
+      { id: "f4", name: "requiredPrecedingTreatments", type: "array", description: "Mandatory prior treatments (e.g. Physical Therapy, NSAIDs)", required: true },
+      { id: "f5", name: "immediateApprovalRedFlags", type: "array", description: "Emergency conditions granting instant prior-auth bypass", required: false },
+      { id: "f6", name: "mandatoryPhysicianSpecialties", type: "array", description: "Approved ordering specialist doctor types", required: true },
+      { id: "f7", name: "drugFormularyTier", type: "string", description: "Tier 1 Generic, Tier 2 Preferred, Tier 3 Specialty, or Non-Formulary", required: false },
+      { id: "f8", name: "expeditedTurnaroundHours", type: "number", description: "CMS mandated turnaround deadline in hours (e.g. 72)", required: true }
+    ]
   }
 ];
 
@@ -1963,7 +1981,7 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
                 </span>
               </div>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {NICHE_SCHEMA_TEMPLATES.map((tmpl) => {
                   const isActive = activeTemplateId === tmpl.id;
                   return (

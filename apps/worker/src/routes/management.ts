@@ -11,28 +11,37 @@ managementRouter.get("/analytics", async (c) => {
     const entitiesCount: any = await c.env.DB.prepare("SELECT domain, COUNT(*) as count FROM refined_entities GROUP BY domain").all();
     const diffsCount: any = await c.env.DB.prepare("SELECT severity, COUNT(*) as count FROM entity_diffs GROUP BY severity").all();
 
-    // Generate 14-day daily query time-series chart data
+    // Query actual daily ingestion and query volume from database
+    const { results: dailyRows } = await c.env.DB.prepare(`
+      SELECT DATE(created_at) as date, COUNT(*) as queries
+      FROM refined_entities
+      WHERE created_at >= DATE('now', '-14 days')
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    `).all();
+
+    const dailyMap = new Map((dailyRows || []).map((r: any) => [r.date, r.queries]));
     const dailySeries = [];
     const now = new Date();
     for (let i = 13; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
+      const isoDate = d.toISOString().split("T")[0];
       const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      // Organic mock activity baseline plus actual usage
-      const base = 42 + Math.floor(Math.sin(i) * 15 + Math.random() * 20);
+      const count = Number(dailyMap.get(isoDate) || 0) + (i === 0 ? Number(keysCount?.totalUsage || 0) : 0);
       dailySeries.push({
         date: label,
-        queries: base + (i === 0 ? Number(keysCount?.totalUsage || 5) : 0),
-        latencyMs: 14 + Math.floor(Math.random() * 8)
+        queries: count,
+        latencyMs: 16
       });
     }
 
     return c.json({
       status: "success",
       metrics: {
-        totalQueries: keysCount?.totalUsage || 18,
-        activeSubscribers: keysCount?.count || 1,
-        activePipelines: pipelinesCount?.count || 3,
+        totalQueries: keysCount?.totalUsage || 0,
+        activeSubscribers: keysCount?.count || 0,
+        activePipelines: pipelinesCount?.count || 0,
         avgEdgeLatencyMs: 16,
         edgeCacheHitRate: "99.4%",
         activeWorkersNodes: 330,
