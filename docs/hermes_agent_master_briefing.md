@@ -21,6 +21,94 @@ The Refinery operates an edge-native data foundry deployed across **330 Cloudfla
 
 ---
 
+## 📡 How Hermes-Agent Accesses & Keeps Knowledge Continuously Synchronized
+
+Hermes-Agent can consume and stay 100% up to date with the Data Refinery using any of the following 5 integration options:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│             HERMES-AGENT ACCESS & CONTINUOUS UPDATE MODES                              │
+├──────────────────────┬───────────────────────────────┬─────────────────────────────────┤
+│ ACCESS METHOD        │ HOW IT WORKS                  │ UPDATE FREQUENCY                │
+├──────────────────────┼───────────────────────────────┼─────────────────────────────────┤
+│ 1. 🤖 Live MCP Server│ Hermes queries the live edge  │ ⚡ 100% REAL-TIME (Zero manual  │
+│    (Recommended)     │ endpoint via JSON-RPC 2.0.    │    updates needed; live data).  │
+├──────────────────────┼───────────────────────────────┼─────────────────────────────────┤
+│ 2. 🔄 Git Auto-Pull  │ `git pull origin main` on the │ 🚀 Updated immediately on every │
+│                      │ Hermes workstation.           │    code commit & deployment.    │
+├──────────────────────┼───────────────────────────────┼─────────────────────────────────┤
+│ 3. 🌐 REST API Edge  │ HTTP GET / POST calls to the  │ ⚡ 100% REAL-TIME live queries  │
+│    Endpoints         │ Cloudflare Worker API.        │    against D1 SQL & Vectorize.  │
+├──────────────────────┼───────────────────────────────┼─────────────────────────────────┤
+│ 4. 📁 Local SCP /    │ One-line terminal sync to     │ 📦 Updated on-demand whenever   │
+│    Rsync Script      │ push docs over your LAN.      │    new docs are generated.      │
+├──────────────────────┼───────────────────────────────┼─────────────────────────────────┤
+│ 5. 📡 LAN HTTP Server│ Host docs on your dev machine │ 🔌 Hermes scrapes live markdown │
+│                      │ via `python3 -m http.server`. │    over internal LAN IP.        │
+└──────────────────────┴───────────────────────────────┴─────────────────────────────────┘
+```
+
+### Detailed Setup for Each Access Option:
+
+#### Option 1: Live Model Context Protocol (MCP) — *100% Autonomous & Real-Time*
+If Hermes-Agent supports MCP (or is built with LangChain, LlamaIndex, Claude Desktop, or Cursor), add this configuration:
+```json
+{
+  "mcpServers": {
+    "universal-data-refinery": {
+      "url": "https://data-refinery-worker.juanquy.workers.dev/mcp"
+    }
+  }
+}
+```
+* **Why this is best:** Every time the core dev team updates schemas, releases new tools, or ingests new live data, **Hermes-Agent immediately has access with zero manual file transfers**.
+* **Tools Hermes-Agent Can Call:** `refinery_dev_breaking_changes`, `refinery_b2b_pricing_matrix`, `refinery_regulatory_compliance`, `refinery_semantic_search`, and all dynamic custom schemas (e.g. `refinery_custom_health_insurance_clinical_policy`).
+
+---
+
+#### Option 2: Automated Git Pull Sync
+If the Hermes workstation has GitHub access, clone the repository once:
+```bash
+git clone https://github.com/juanquy/AI-data-refinery.git
+```
+To keep Hermes permanently up to date, run:
+```bash
+cd AI-data-refinery && git pull origin main
+```
+*(Every code change, new schema, and documentation update pushed by the dev team is immediately synced).*
+
+---
+
+#### Option 3: Direct REST API Queries
+Hermes-Agent can fetch live platform state programmatically:
+* **Fetch All Custom Schemas:** `GET https://data-refinery-worker.juanquy.workers.dev/api/v1/schemas`
+* **Fetch Marketplace Listings:** `GET https://data-refinery-worker.juanquy.workers.dev/api/v1/marketplace`
+* **Fetch Edge Telemetry & SLA:** `GET https://data-refinery-worker.juanquy.workers.dev/api/v1/enterprise/sla-health`
+* **On-Demand URL Refinement:** `POST https://data-refinery-worker.juanquy.workers.dev/api/v1/custom/refine`
+
+---
+
+#### Option 4: Local LAN SCP / Rsync Transfer
+From this development machine, copy this master file directly to the Hermes workstation:
+```bash
+scp docs/hermes_agent_master_briefing.md user@<HERMES_LAN_IP>:/path/to/hermes/context/
+```
+Or for recurring continuous sync:
+```bash
+rsync -avz docs/ user@<HERMES_LAN_IP>:/path/to/hermes/context/docs/
+```
+
+---
+
+#### Option 5: Local LAN HTTP Documentation Server
+To allow Hermes-Agent to read docs over HTTP on your local network:
+```bash
+python3 -m http.server 8080 --directory docs/
+```
+Hermes-Agent can fetch `http://<DEV_MACHINE_LAN_IP>:8080/hermes_agent_master_briefing.md`.
+
+---
+
 ## ⚡ Technical Architecture & Core Differentiators
 
 ```
@@ -158,45 +246,6 @@ Hermes-Agent can build upon these existing traction assets:
 ### ICP 4: PropTech & Short-Term Rental Investors
 * **Pain:** Municipalities change Airbnb and zoning bylaws in obscure PDF portals.
 * **Hook:** *"Instant zoning classifications, permit checklists, and penalty fine models across 50,000+ jurisdictions."*
-
----
-
-## 🔌 How Hermes-Agent Can Ingest & Query This System
-
-Since Hermes-Agent is running on a LAN workstation behind a firewall, here are the **4 best ways to feed and connect Hermes-Agent**:
-
-1. **Option 1 (Direct File Access via SCP / Git):**  
-   Copy this master dossier directly:
-   ```bash
-   scp docs/hermes_agent_master_briefing.md user@<LAN_IP>:/path/to/hermes/context/
-   ```
-   Or pull the GitHub repo: `git clone https://github.com/juanquy/AI-data-refinery.git`.
-
-2. **Option 2 (Live MCP Connection):**  
-   Hermes-Agent can connect directly to the production MCP endpoint:
-   ```json
-   {
-     "mcpServers": {
-       "data-refinery": {
-         "url": "https://data-refinery-worker.juanquy.workers.dev/mcp"
-       }
-     }
-   }
-   ```
-   *Hermes-Agent can then invoke tools like `refinery_dev_breaking_changes`, `refinery_b2b_pricing_matrix`, and `refinery_semantic_search` autonomously during market research!*
-
-3. **Option 3 (REST API Queries):**  
-   Hermes-Agent can fetch live platform data via HTTP:
-   * `GET https://data-refinery-worker.juanquy.workers.dev/api/v1/schemas` (Fetch all custom schemas)
-   * `GET https://data-refinery-worker.juanquy.workers.dev/api/v1/marketplace` (Fetch marketplace listings)
-   * `GET https://data-refinery-worker.juanquy.workers.dev/api/v1/enterprise/sla-health` (Fetch edge telemetry)
-
-4. **Option 4 (Local LAN Documentation Server):**  
-   Run a lightweight HTTP doc server from this machine:
-   ```bash
-   python3 -m http.server 8080 --directory docs/
-   ```
-   Hermes-Agent on the LAN can scrape `http://<DEV_MACHINE_IP>:8080/hermes_agent_master_briefing.md`.
 
 ---
 
