@@ -203,6 +203,102 @@ export default function App() {
     }, 2500);
   };
 
+interface NicheSchemaTemplate {
+  id: string;
+  badge: string;
+  acv: string;
+  name: string;
+  description: string;
+  prompt: string;
+  fields: CustomSchemaField[];
+}
+
+const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
+  {
+    id: "dev-sdk",
+    badge: "📦 DevOps & AI Coding",
+    acv: "$12k–$60k/yr",
+    name: "Developer SDK Breaking Changes & AST Migration",
+    description: "Extracts deprecated functions, removed parameters, breaking signature shifts, and exact before/after code migration snippets.",
+    prompt: "Extract affected symbols, deprecated function names, breaking signatures, and exact before/after code migration snippets.",
+    fields: [
+      { id: "f1", name: "packageOrServiceName", type: "string", description: "e.g. stripe-node, nextjs, react, @cloudflare/workers-types", required: true },
+      { id: "f2", name: "version", type: "string", description: "Version number e.g. 15.0.0 or 2026.1", required: true },
+      { id: "f3", name: "hasBreakingChanges", type: "boolean", description: "True if release contains breaking changes", required: true },
+      { id: "f4", name: "affectedSymbols", type: "array", description: "List of deprecated or removed functions, classes, and methods", required: true },
+      { id: "f5", name: "migrationCodeBefore", type: "string", description: "Original legacy code snippet prior to upgrade", required: false },
+      { id: "f6", name: "migrationCodeAfter", type: "string", description: "Updated modern code snippet compliant with new release", required: false },
+      { id: "f7", name: "severityLevel", type: "string", description: "CRITICAL, HIGH, MEDIUM, or LOW", required: true }
+    ]
+  },
+  {
+    id: "b2b-pricing",
+    badge: "💰 B2B SaaS Pricing",
+    acv: "$24k–$100k/yr",
+    name: "B2B SaaS Dynamic Pricing & Quota Matrix",
+    description: "Extracts normalized monthly/annual costs, seat limits, included token/bandwidth quotas, and hidden overage terms across SaaS vendors.",
+    prompt: "Extract normalized monthly/annual pricing, seat minimums, included usage/token quotas, and hidden overage terms.",
+    fields: [
+      { id: "f1", name: "productName", type: "string", description: "Name of vendor product (e.g. Supabase, Datadog, OpenAI)", required: true },
+      { id: "f2", name: "planTier", type: "string", description: "e.g. Starter, Pro, Team, Enterprise", required: true },
+      { id: "f3", name: "monthlyPriceUSD", type: "number", description: "Base monthly recurring price in USD", required: true },
+      { id: "f4", name: "annualPriceUSD", type: "number", description: "Annual billed rate per month in USD", required: false },
+      { id: "f5", name: "includedTokenQuota", type: "number", description: "Monthly included compute/token quota", required: false },
+      { id: "f6", name: "overageRatePerUnit", type: "number", description: "Overage fee per million tokens or per GB", required: false },
+      { id: "f7", name: "hiddenContractCaveats", type: "array", description: "Seat minimums, annual commitments, and fine print", required: false }
+    ]
+  },
+  {
+    id: "municipal-zoning",
+    badge: "🏛️ Municipal Zoning & STR",
+    acv: "$36k–$120k/yr",
+    name: "Municipal Zoning, STR & Permit Compliance",
+    description: "Extracts city zoning classifications, short-term rental permits, mandatory inspection checklists, and penalty fine structures.",
+    prompt: "Extract municipal zoning classifications, short-term rental permit laws, mandatory compliance checklists, and penalty fine structures.",
+    fields: [
+      { id: "f1", name: "jurisdictionCity", type: "string", description: "City or municipality name (e.g. San Francisco, Austin)", required: true },
+      { id: "f2", name: "zoningCode", type: "string", description: "Zoning code (e.g. R-1, C-3, Mixed-Use Commercial)", required: true },
+      { id: "f3", name: "shortTermRentalAllowed", type: "boolean", description: "Whether short-term rentals (Airbnb) are legal", required: true },
+      { id: "f4", name: "permitFeeUSD", type: "number", description: "Filing and application fee in USD", required: false },
+      { id: "f5", name: "mandatoryInspections", type: "array", description: "Required structural, fire, and health safety inspections", required: true },
+      { id: "f6", name: "maximumPenaltyFineUSD", type: "number", description: "Maximum violation penalty fine amount", required: false }
+    ]
+  },
+  {
+    id: "biopharma-fda",
+    badge: "🧬 BioPharma FDA & Patents",
+    acv: "$50k–$150k/yr",
+    name: "BioPharma FDA Trials & Patent Exclusivity Cliffs",
+    description: "Extracts active chemical ingredients, FDA 510(k)/NDA approvals, clinical trial phases, black-box warnings, and patent exclusivity expiration dates.",
+    prompt: "Extract active pharmaceutical ingredients, FDA approval status, clinical trial phases, black box warnings, and patent exclusivity expiration dates.",
+    fields: [
+      { id: "f1", name: "drugBrandName", type: "string", description: "Commercial brand name of therapeutic drug", required: true },
+      { id: "f2", name: "activeCompound", type: "string", description: "Chemical or biologic active pharmaceutical ingredient (API)", required: true },
+      { id: "f3", name: "fdaApprovalStatus", type: "string", description: "APPROVED, FAST_TRACK, PHASE_III, or UNDER_REVIEW", required: true },
+      { id: "f4", name: "therapeuticIndication", type: "string", description: "Target disease or medical condition", required: true },
+      { id: "f5", name: "patentExclusivityExpiration", type: "string", description: "Date or year when patent cliff occurs (e.g. 2028-11)", required: true },
+      { id: "f6", name: "blackBoxWarnings", type: "array", description: "FDA safety warnings and contraindications", required: false }
+    ]
+  },
+  {
+    id: "sec-10k",
+    badge: "📊 SEC 10-K & Risk Factors",
+    acv: "$30k–$90k/yr",
+    name: "SEC 10-K Disclosures & Risk Factor Intelligence",
+    description: "Extracts GAAP vs Non-GAAP operating metrics, total debt maturities, forward guidance statements, and highlighted corporate risk factors from SEC filings.",
+    prompt: "Extract GAAP vs Non-GAAP operating metrics, total debt maturities, forward guidance statements, and highlighted corporate risk factors from SEC filings.",
+    fields: [
+      { id: "f1", name: "tickerSymbol", type: "string", description: "Stock ticker symbol (e.g. NVDA, MSFT, AAPL)", required: true },
+      { id: "f2", name: "fiscalPeriod", type: "string", description: "e.g. FY2025, Q3-2026", required: true },
+      { id: "f3", name: "totalRevenueUSD", type: "number", description: "Total GAAP revenue in USD", required: true },
+      { id: "f4", name: "gaapOperatingMarginPercent", type: "number", description: "GAAP operating margin percentage", required: false },
+      { id: "f5", name: "totalDebtMaturityUSD", type: "number", description: "Total long-term debt maturing in USD", required: false },
+      { id: "f6", name: "criticalRiskFactors", type: "array", description: "Primary macroeconomic and technological risk factors", required: true },
+      { id: "f7", name: "forwardGuidanceSummary", type: "string", description: "Executive forward guidance summary", required: false }
+    ]
+  }
+];
+
   // Phase 3: Visual Schema Studio & Workspace Multi-Tenancy State
   const [customSchemas, setCustomSchemas] = useState<CustomSchemaItem[]>([]);
   const [schemasLoading, setSchemasLoading] = useState(false);
@@ -211,17 +307,22 @@ export default function App() {
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
   
   // New Schema Builder Form
-  const [newSchemaName, setNewSchemaName] = useState("Real Estate & Permit Tracker");
-  const [newSchemaDesc, setNewSchemaDesc] = useState("Extracts zoning codes, square footage, permit approvals, and construction cost estimates.");
-  const [newSchemaPrompt, setNewSchemaPrompt] = useState("Extract precise municipal zoning parameters, permit numbers, and estimated valuation.");
-  const [newSchemaFields, setNewSchemaFields] = useState<CustomSchemaField[]>([
-    { id: "f1", name: "propertyAddress", type: "string", description: "Full street address of the property", required: true },
-    { id: "f2", name: "zoningClassification", type: "string", description: "Commercial, Residential, or Mixed-Use zoning code", required: true },
-    { id: "f3", name: "estimatedCostUSD", type: "number", description: "Estimated project construction or permit fee", required: false },
-    { id: "f4", name: "permitApprovalStatus", type: "string", description: "Status: APPROVED, PENDING, or DENIED", required: true }
-  ]);
+  const [newSchemaName, setNewSchemaName] = useState(NICHE_SCHEMA_TEMPLATES[0].name);
+  const [newSchemaDesc, setNewSchemaDesc] = useState(NICHE_SCHEMA_TEMPLATES[0].description);
+  const [newSchemaPrompt, setNewSchemaPrompt] = useState(NICHE_SCHEMA_TEMPLATES[0].prompt);
+  const [newSchemaFields, setNewSchemaFields] = useState<CustomSchemaField[]>(NICHE_SCHEMA_TEMPLATES[0].fields);
   const [savingSchema, setSavingSchema] = useState(false);
   const [previewTab, setPreviewTab] = useState<"json" | "typescript" | "mcp">("json");
+  const [activeTemplateId, setActiveTemplateId] = useState<string>("dev-sdk");
+
+  const handleApplyNicheTemplate = (template: NicheSchemaTemplate) => {
+    setActiveTemplateId(template.id);
+    setNewSchemaName(template.name);
+    setNewSchemaDesc(template.description);
+    setNewSchemaPrompt(template.prompt);
+    setNewSchemaFields([...template.fields]);
+    showToast(`✅ Loaded Template: ${template.name}`);
+  };
   
   // Custom Schema Tester
   const [testingSchemaSlug, setTestingSchemaSlug] = useState<string | null>(null);
@@ -1845,6 +1946,63 @@ export default function App() {
                 <span className="text-xs px-3 py-1 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-bold">
                   {customSchemas.length} Active Custom Schemas
                 </span>
+              </div>
+            </div>
+
+            {/* Top 5 High-Value Niche Templates Selector Ribbon */}
+            <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-5 space-y-3 shadow-xl backdrop-blur-md">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-xs font-extrabold text-white uppercase tracking-wider">
+                    ⭐ Pre-loaded Enterprise Niche Templates (1-Click Load)
+                  </h3>
+                </div>
+                <span className="text-[11px] font-mono text-slate-400">
+                  Select a high-ACV vertical to populate production-grade schemas instantly
+                </span>
+              </div>
+
+              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                {NICHE_SCHEMA_TEMPLATES.map((tmpl) => {
+                  const isActive = activeTemplateId === tmpl.id;
+                  return (
+                    <button
+                      key={tmpl.id}
+                      type="button"
+                      onClick={() => handleApplyNicheTemplate(tmpl)}
+                      className={`text-left p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between group relative overflow-hidden ${
+                        isActive
+                          ? "bg-teal-950/50 border-teal-500/80 shadow-lg shadow-teal-500/10 ring-1 ring-teal-500/50"
+                          : "bg-slate-950/70 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/60"
+                      }`}
+                    >
+                      <div className="space-y-1.5 relative z-10">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[11px] font-bold text-teal-300">
+                            {tmpl.badge}
+                          </span>
+                          <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            {tmpl.acv}
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-bold text-white group-hover:text-teal-300 transition-colors line-clamp-1">
+                          {tmpl.name}
+                        </h4>
+                        <p className="text-[10px] text-slate-400 line-clamp-2 leading-snug">
+                          {tmpl.description}
+                        </p>
+                      </div>
+
+                      <div className="mt-2.5 pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                        <span>{tmpl.fields.length} Fields</span>
+                        <span className={isActive ? "text-teal-400 font-bold" : "group-hover:text-slate-300"}>
+                          {isActive ? "● Active" : "Apply →"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
