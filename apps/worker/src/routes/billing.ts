@@ -119,12 +119,71 @@ billingRouter.get("/session-key", async (c) => {
   }
 });
 
+// Security Helper: Verify Stripe Webhook Signature via Web Crypto HMAC-SHA256
+async function verifyStripeSignature(
+  payload: string,
+  signatureHeader: string,
+  secret: string,
+  toleranceSeconds = 300
+): Promise<boolean> {
+  if (!signatureHeader || !secret) return false;
+
+  const items = signatureHeader.split(",");
+  let timestamp = "";
+  const signatures: string[] = [];
+
+  for (const item of items) {
+    const [key, value] = item.trim().split("=");
+    if (key === "t") timestamp = value;
+    if (key === "v1") signatures.push(value);
+  }
+
+  if (!timestamp || signatures.length === 0) return false;
+
+  const now = Math.floor(Date.now() / 1000);
+  const eventTime = parseInt(timestamp, 10);
+  if (isNaN(eventTime) || Math.abs(now - eventTime) > toleranceSeconds) {
+    return false; // Reject expired timestamps to prevent replay attacks
+  }
+
+  const signedPayload = `${timestamp}.${payload}`;
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signatureBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(signedPayload));
+  const expectedHex = Array.from(new Uint8Array(signatureBuffer))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  return signatures.some(s => s === expectedHex);
+}
+
 // 3. Autonomous Agent Micro-Token Provisioning (HTTP 402 Pay-Per-Query)
 billingRouter.post("/agent-token", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const agentName = body.agentName || "Autonomous_Agent";
   const agentOwner = body.agentOwner || "agent@autonomous.ai";
-  const queriesAllowance = Number(body.queriesAllowance || 100);
+
+  // Check if caller is an active Pro/Enterprise customer
+  const authKey = c.req.header("X-Refinery-Key") || c.req.header("Authorization")?.replace("Bearer ", "");
+  let hasActiveParent = false;
+  if (authKey) {
+    const parent: any = await c.env.DB.prepare(
+      "SELECT id, plan, status FROM api_keys WHERE key_value = ? AND status = 'ACTIVE' LIMIT 1"
+    ).bind(authKey).first();
+    if (parent) hasActiveParent = true;
+  }
+
+  // Enforce quota caps: Unauthenticated demo agents capped at 50 queries to prevent resource exhaustion
+  const maxAllowance = hasActiveParent ? 50000 : 50;
+  const requested = Number(body.queriesAllowance || (hasActiveParent ? 500 : 50));
+  const queriesAllowance = Math.min(maxAllowance, Math.max(1, isNaN(requested) ? 50 : requested));
 
   const rawRandom = crypto.randomUUID().replace(/-/g, "");
   const agentToken = `ref_agent_${rawRandom}`;
@@ -145,11 +204,14 @@ billingRouter.post("/agent-token", async (c) => {
     queriesAllowance,
     pricePerQuery: "$0.005 USD",
     protocol: "HTTP-402-Pay-Per-Query",
+    isTrialTier: !hasActiveParent,
     usageHeaders: {
       "Authorization": `Bearer ${agentToken}`,
       "X-Refinery-Key": agentToken
     },
-    message: `Prepaid agent key activated with ${queriesAllowance} query credits.`
+    message: hasActiveParent
+      ? `Dedicated agent token activated with ${queriesAllowance} query credits.`
+      : `Developer demo agent token activated with ${queriesAllowance} trial credits. Upgrade to Pro for high-concurrency production fleets.`
   });
 });
 
@@ -183,11 +245,33 @@ billingRouter.get("/verify-key", async (c) => {
   });
 });
 
-// 4. Stripe Webhook listener
+// 5. Cryptographically Verified Stripe Webhook Listener
 billingRouter.post("/webhook", async (c) => {
-  const event: any = await c.req.json().catch(() => null);
+  const rawBody = await c.req.text();
+  const signature = c.req.header("stripe-signature");
+  const webhookSecret = (c.env as any).STRIPE_WEBHOOK_SECRET || "";
+
+  // If webhook secret is configured, enforce strict HMAC-SHA256 signature verification
+  if (webhookSecret) {
+    const isValid = await verifyStripeSignature(rawBody, signature || "", webhookSecret);
+    if (!isValid) {
+      console.error("⚠️ Stripe Webhook signature verification failed!");
+      return c.json({ error: "Invalid Stripe signature" }, 400);
+    }
+  } else {
+    // In dev without secret, warn in logs
+    console.warn("⚠️ STRIPE_WEBHOOK_SECRET not configured. Please configure in production.");
+  }
+
+  let event: any;
+  try {
+    event = JSON.parse(rawBody);
+  } catch {
+    return c.text("Invalid JSON payload", 400);
+  }
+
   if (!event || !event.type) {
-    return c.text("Invalid payload", 400);
+    return c.text("Invalid event payload", 400);
   }
 
   const logId = `log_${crypto.randomUUID()}`;

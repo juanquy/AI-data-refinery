@@ -32,6 +32,35 @@ customRouter.post("/refine", async (c) => {
     return c.json({ error: "Valid sourceUrl or url required" }, 400);
   }
 
+  // Security: Prevent LLM resource exhaustion via IP rate-limiting & API key quota deduction
+  const apiKey = c.req.header("X-Refinery-Key") || c.req.header("Authorization")?.replace("Bearer ", "");
+  const clientIp = c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for") || "unknown-ip";
+
+  if (apiKey) {
+    const keyRec: any = await c.env.DB.prepare(
+      "SELECT id, current_usage, monthly_quota, status FROM api_keys WHERE key_value = ? AND status = 'ACTIVE' LIMIT 1"
+    ).bind(apiKey).first();
+
+    if (!keyRec || keyRec.current_usage >= keyRec.monthly_quota) {
+      return c.json({ error: "Monthly quota exhausted or invalid API key. Refill at /api/v1/billing/agent-token", status: 402 }, 402);
+    }
+
+    c.executionCtx.waitUntil(
+      c.env.DB.prepare("UPDATE api_keys SET current_usage = current_usage + 1 WHERE id = ?").bind(keyRec.id).run()
+    );
+  } else if (c.env.KV_CACHE) {
+    // Unauthenticated rate limiting: max 20 on-demand refinements per hour per IP
+    const rateLimitKey = `ratelimit:refine:${clientIp}`;
+    const currentCount = Number(await c.env.KV_CACHE.get(rateLimitKey) || 0);
+    if (currentCount >= 20) {
+      return c.json({
+        error: "Rate limit exceeded (20 on-demand refinements/hour for anonymous requests). Provide an API key via X-Refinery-Key header.",
+        status: 429
+      }, 429);
+    }
+    await c.env.KV_CACHE.put(rateLimitKey, String(currentCount + 1), { expirationTtl: 3600 });
+  }
+
   let rawText = "";
   try {
     rawText = await fetchWebpageContent(sourceUrl);

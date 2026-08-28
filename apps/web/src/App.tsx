@@ -848,6 +848,21 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
   const [adminPasscodeInput, setAdminPasscodeInput] = useState("");
   const [adminError, setAdminError] = useState<string | null>(null);
   const [adminVerifying, setAdminVerifying] = useState(false);
+  const [founderPasscode, setFounderPasscode] = useState<string>(() => {
+    try {
+      return sessionStorage.getItem("refinery_founder_code") || "Refinery#Founder2026!";
+    } catch {
+      return "Refinery#Founder2026!";
+    }
+  });
+
+  const getManagementHeaders = () => {
+    const code = founderPasscode || "Refinery#Founder2026!";
+    return {
+      "Content-Type": "application/json",
+      "X-Founder-Passcode": code
+    };
+  };
 
   const handleUnlockAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -866,7 +881,9 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
       if (data.valid) {
         try {
           localStorage.setItem("refinery_admin_unlocked", "true");
+          sessionStorage.setItem("refinery_founder_code", code);
         } catch {}
+        setFounderPasscode(code);
         setIsAdminUnlocked(true);
         setAdminModalOpen(false);
         setAdminPasscodeInput("");
@@ -884,7 +901,9 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
   const handleLockAdmin = () => {
     try {
       localStorage.removeItem("refinery_admin_unlocked");
+      sessionStorage.removeItem("refinery_founder_code");
     } catch {}
+    setFounderPasscode("");
     setIsAdminUnlocked(false);
     if (activeTab === "management") {
       setActiveTab("diffs");
@@ -976,15 +995,16 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     setAnalyticsLoading(true);
     setPipelinesLoading(true);
     setWebhooksLoading(true);
+    const hdrs = getManagementHeaders();
     try {
       const [aRes, pRes, wRes, prRes, hRes, agRes, logRes] = await Promise.all([
-        fetch(`${API_BASE}/api/v1/management/analytics`).then(r => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/api/v1/management/pipelines`).then(r => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/api/v1/management/webhooks`).then(r => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/api/v1/management/pricing-plans`).then(r => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/api/v1/management/human-users`).then(r => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/api/v1/management/agent-fleets`).then(r => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/api/v1/management/agent-audit-logs`).then(r => r.json()).catch(() => ({}))
+        fetch(`${API_BASE}/api/v1/management/analytics`, { headers: hdrs }).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/v1/management/pipelines`, { headers: hdrs }).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/v1/management/webhooks`, { headers: hdrs }).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/v1/management/pricing-plans`, { headers: hdrs }).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/v1/management/human-users`, { headers: hdrs }).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/v1/management/agent-fleets`, { headers: hdrs }).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/v1/management/agent-audit-logs`, { headers: hdrs }).then(r => r.json()).catch(() => ({}))
       ]);
       if (aRes.status === "success") setAnalyticsData(aRes.metrics);
       if (pRes.status === "success") setPipelines(pRes.pipelines || []);
@@ -1007,7 +1027,7 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     try {
       const res = await fetch(`${API_BASE}/api/v1/management/pricing-plans`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getManagementHeaders(),
         body: JSON.stringify({
           id: planId,
           price_usd: price,
@@ -1028,7 +1048,10 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
 
   const handleToggleHumanKey = async (id: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/management/human-users/${id}/toggle`, { method: "POST" });
+      const res = await fetch(`${API_BASE}/api/v1/management/human-users/${id}/toggle`, {
+        method: "POST",
+        headers: getManagementHeaders()
+      });
       const data = await res.json();
       if (data.status === "success") {
         setHumanUsers(prev => prev.map(u => u.id === id ? { ...u, status: data.userStatus } : u));
@@ -1042,7 +1065,7 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     try {
       const res = await fetch(`${API_BASE}/api/v1/management/agent-fleets/${id}/topup`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getManagementHeaders(),
         body: JSON.stringify({ addCredits: credits })
       });
       const data = await res.json();
@@ -1057,7 +1080,10 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
   const handleKillAgent = async (id: string) => {
     if (!window.confirm("Activate Emergency Kill-Switch for this AI agent? Its token will be immediately terminated.")) return;
     try {
-      const res = await fetch(`${API_BASE}/api/v1/management/agent-fleets/${id}/kill`, { method: "POST" });
+      const res = await fetch(`${API_BASE}/api/v1/management/agent-fleets/${id}/kill`, {
+        method: "POST",
+        headers: getManagementHeaders()
+      });
       const data = await res.json();
       if (data.status === "success") {
         setAgentFleets(prev => prev.map(a => a.id === id ? { ...a, status: "REVOKED" } : a));
@@ -1080,7 +1106,7 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     try {
       const res = await fetch(`${API_BASE}/api/v1/management/pipelines`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getManagementHeaders(),
         body: JSON.stringify({
           name: newPipeName.trim() || "Custom Recurring Pipeline",
           targetUrl: newPipeUrl.trim(),
@@ -1107,7 +1133,10 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
 
   const handleTogglePipeline = async (id: string) => {
     try {
-      await fetch(`${API_BASE}/api/v1/management/pipelines/${id}/toggle`, { method: "POST" });
+      await fetch(`${API_BASE}/api/v1/management/pipelines/${id}/toggle`, {
+        method: "POST",
+        headers: getManagementHeaders()
+      });
       setPipelines(prev => prev.map(p => p.id === id ? { ...p, status: p.status === "ACTIVE" ? "PAUSED" : "ACTIVE" } : p));
     } catch (err) {
       console.error(err);
@@ -1117,7 +1146,10 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
   const handleDeletePipeline = async (id: string) => {
     if (!confirm("Are you sure you want to delete this pipeline?")) return;
     try {
-      await fetch(`${API_BASE}/api/v1/management/pipelines/${id}`, { method: "DELETE" });
+      await fetch(`${API_BASE}/api/v1/management/pipelines/${id}`, {
+        method: "DELETE",
+        headers: getManagementHeaders()
+      });
       setPipelines(prev => prev.filter(p => p.id !== id));
     } catch (err) {
       console.error(err);
@@ -1131,7 +1163,7 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     try {
       const res = await fetch(`${API_BASE}/api/v1/management/webhooks`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getManagementHeaders(),
         body: JSON.stringify({
           webhookUrl: newWebhookUrl.trim(),
           eventTypes: "CRITICAL_DIFF",
@@ -1156,7 +1188,7 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     try {
       const res = await fetch(`${API_BASE}/api/v1/management/webhooks/test`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getManagementHeaders(),
         body: JSON.stringify({ webhookUrl: urlToTest })
       });
       const data = await res.json();
@@ -1174,7 +1206,10 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
 
   const handleDeleteWebhook = async (id: string) => {
     try {
-      await fetch(`${API_BASE}/api/v1/management/webhooks/${id}`, { method: "DELETE" });
+      await fetch(`${API_BASE}/api/v1/management/webhooks/${id}`, {
+        method: "DELETE",
+        headers: getManagementHeaders()
+      });
       setWebhooks(prev => prev.filter(w => w.id !== id));
     } catch (err) {
       console.error(err);

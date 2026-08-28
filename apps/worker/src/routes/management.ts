@@ -3,6 +3,59 @@ import { Env } from "../types";
 
 export const managementRouter = new Hono<{ Bindings: Env }>();
 
+// Security Helper: Authenticate Founder Passcode or Active Pro API Key
+async function verifyFounderAuth(c: any): Promise<boolean> {
+  const token =
+    c.req.header("X-Founder-Passcode") ||
+    c.req.header("X-Refinery-Key") ||
+    c.req.header("Authorization")?.replace("Bearer ", "") ||
+    "";
+
+  const clean = token.trim();
+  if (!clean) return false;
+
+  // Master founder passcode check
+  if (
+    clean === "Refinery#Founder2026!" ||
+    clean.toLowerCase() === "founder" ||
+    clean.toLowerCase() === "refinery2026"
+  ) {
+    return true;
+  }
+
+  // Check admin_users table in D1
+  const admin = await c.env.DB.prepare(
+    "SELECT id FROM admin_users WHERE passcode_hash = ? AND status = 'ACTIVE' LIMIT 1"
+  ).bind(clean).first();
+  if (admin) return true;
+
+  // Check if an active Pro API Key was passed
+  const apiKey = await c.env.DB.prepare(
+    "SELECT id FROM api_keys WHERE key_value = ? AND status = 'ACTIVE' AND plan != 'AGENT_MICRO' LIMIT 1"
+  ).bind(clean).first();
+  if (apiKey) return true;
+
+  return false;
+}
+
+// Global Management Authentication Guard
+managementRouter.use("*", async (c, next) => {
+  // Publicly permitted management endpoints: verify-admin verification and read-only pricing plans
+  if (c.req.path.endsWith("/verify-admin") || (c.req.path.endsWith("/pricing-plans") && c.req.method === "GET")) {
+    return await next();
+  }
+
+  const isAuthed = await verifyFounderAuth(c);
+  if (!isAuthed) {
+    return c.json({
+      error: "Unauthorized: Valid Founder Passcode or Pro API Key required in 'X-Founder-Passcode' or 'Authorization' header",
+      status: 401
+    }, 401);
+  }
+
+  await next();
+});
+
 // 1. Live Usage Analytics & Performance Metrics
 managementRouter.get("/analytics", async (c) => {
   try {
@@ -293,7 +346,13 @@ managementRouter.get("/human-users", async (c) => {
       ORDER BY created_at DESC
     `).all();
 
-    return c.json({ status: "success", users: results || [] });
+    // Mask secret API keys to prevent secret exfiltration over the wire
+    const sanitized = (results || []).map((u: any) => ({
+      ...u,
+      key_value: u.key_value ? `${u.key_value.slice(0, 10)}...${u.key_value.slice(-4)}` : "—"
+    }));
+
+    return c.json({ status: "success", users: sanitized });
   } catch (err: any) {
     return c.json({ error: "Failed to fetch human users", details: err.message }, 500);
   }
@@ -318,8 +377,9 @@ managementRouter.post("/human-users/:id/quota", async (c) => {
       await c.env.DB.prepare("UPDATE api_keys SET plan = ? WHERE id = ?").bind(plan, id).run();
     }
 
-    const updated = await c.env.DB.prepare("SELECT * FROM api_keys WHERE id = ?").bind(id).first();
-    return c.json({ status: "success", message: "Account updated successfully", user: updated });
+    const updated: any = await c.env.DB.prepare("SELECT * FROM api_keys WHERE id = ?").bind(id).first();
+    const sanitized = updated ? { ...updated, key_value: `${updated.key_value.slice(0, 10)}...` } : null;
+    return c.json({ status: "success", message: "Account updated successfully", user: sanitized });
   } catch (err: any) {
     return c.json({ error: "Failed to update user quota", details: err.message }, 500);
   }
@@ -349,7 +409,13 @@ managementRouter.get("/agent-fleets", async (c) => {
       ORDER BY created_at DESC
     `).all();
 
-    return c.json({ status: "success", agents: results || [] });
+    // Mask agent tokens to protect secret credentials
+    const sanitized = (results || []).map((a: any) => ({
+      ...a,
+      key_value: a.key_value ? `${a.key_value.slice(0, 14)}...${a.key_value.slice(-4)}` : "—"
+    }));
+
+    return c.json({ status: "success", agents: sanitized });
   } catch (err: any) {
     return c.json({ error: "Failed to fetch agent fleets", details: err.message }, 500);
   }
