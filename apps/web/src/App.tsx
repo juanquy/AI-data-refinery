@@ -1342,167 +1342,174 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
         {/* Tab Navigation Menu */}
         <div className="flex items-center gap-2 overflow-x-auto pb-3 border-b border-slate-800/80 scroll-smooth">
           {/* PUBLIC CLIENT TABS */}
-          <button
-            onClick={() => setActiveTab("diffs")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "diffs"
-                ? "bg-orange-600 text-white shadow-lg shadow-orange-600/20"
-                : "bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-            }`}
-          >
-            <Activity className="w-4 h-4" />
-            Live Diffs & Alerts
-          </button>
+          {/* Group 1: Intelligence Feeds */}
+          <div className="flex items-center gap-1.5 bg-slate-950/70 p-1 rounded-xl border border-slate-800/80">
+            <button
+              onClick={() => setActiveTab("diffs")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "diffs"
+                  ? "bg-orange-600 text-white shadow-md shadow-orange-600/20"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              Live Alerts
+            </button>
 
-          <button
-            onClick={() => setActiveTab("dev")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "dev"
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                : "bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-            }`}
-          >
-            <Code2 className="w-4 h-4" />
-            1. Dev Breaking Changes
-          </button>
+            <button
+              onClick={() => setActiveTab("dev")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "dev"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+              }`}
+            >
+              <Code2 className="w-3.5 h-3.5" />
+              1. AST Diffs
+            </button>
 
-          <button
-            onClick={() => setActiveTab("pricing")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "pricing"
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20"
-                : "bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-            }`}
-          >
-            <DollarSign className="w-4 h-4" />
-            2. B2B Pricing Matrices
-          </button>
+            <button
+              onClick={() => setActiveTab("pricing")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "pricing"
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+              }`}
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              2. SaaS Pricing Intel
+            </button>
 
-          <button
-            onClick={() => setActiveTab("regulatory")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "regulatory"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-600/20"
-                : "bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-            }`}
-          >
-            <Building2 className="w-4 h-4" />
-            3. Regulatory & Permits
-          </button>
+            <button
+              onClick={() => setActiveTab("regulatory")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "regulatory"
+                  ? "bg-purple-600 text-white shadow-md shadow-purple-600/20"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              3. Municipal Rules
+            </button>
+          </div>
 
-          <button
-            onClick={() => setActiveTab("schemas")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === "schemas"
-                ? "bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/20"
-                : "bg-slate-900/60 text-teal-400 hover:text-teal-300 hover:bg-slate-800 border border-teal-500/20"
-            }`}
-          >
-            <Sliders className="w-4 h-4 text-teal-400" />
-            🎨 4. Visual Schema Studio
-          </button>
+          {/* Group 2: Studio & Builders */}
+          <div className="flex items-center gap-1.5 bg-slate-950/70 p-1 rounded-xl border border-slate-800/80">
+            <button
+              onClick={() => setActiveTab("schemas")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "schemas"
+                  ? "bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-md shadow-teal-500/20"
+                  : "text-teal-400 hover:text-teal-300 hover:bg-slate-800/60"
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              🎨 4. Schema Studio
+            </button>
 
-          <button
-            onClick={() => setActiveTab("marketplace")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === "marketplace"
-                ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/20"
-                : "bg-slate-900/60 text-amber-400 hover:text-amber-300 hover:bg-slate-800 border border-amber-500/20"
-            }`}
-          >
-            <ShoppingBag className="w-4 h-4 text-amber-400" />
-            🛒 5. Creator Marketplace
-          </button>
+            <button
+              onClick={() => setActiveTab("marketplace")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "marketplace"
+                  ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/20"
+                  : "text-amber-400 hover:text-amber-300 hover:bg-slate-800/60"
+              }`}
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              🛒 5. Marketplace
+            </button>
 
-          <button
-            onClick={() => setActiveTab("export")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === "export"
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20"
-                : "bg-slate-900/60 text-blue-400 hover:text-blue-300 hover:bg-slate-800 border border-blue-500/20"
-            }`}
-          >
-            <Download className="w-4 h-4 text-blue-400" />
-            📦 6. LLM Fine-Tuning Exporter
-          </button>
+            <button
+              onClick={() => setActiveTab("export")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "export"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20"
+                  : "text-blue-400 hover:text-blue-300 hover:bg-slate-800/60"
+              }`}
+            >
+              <Download className="w-3.5 h-3.5" />
+              📦 6. Fine-Tuning Exporter
+            </button>
 
-          <button
-            onClick={() => setActiveTab("playground")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "playground"
-                ? "bg-amber-600 text-white shadow-lg shadow-amber-600/20"
-                : "bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-            }`}
-          >
-            <Globe className="w-4 h-4" />
-            Universal On-Demand Refiner
-          </button>
+            <button
+              onClick={() => setActiveTab("playground")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "playground"
+                  ? "bg-amber-600 text-white shadow-md shadow-amber-600/20"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              URL Refiner
+            </button>
+          </div>
 
-          <button
-            onClick={() => setActiveTab("mcp")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "mcp"
-                ? "bg-slate-700 text-white"
-                : "bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-            }`}
-          >
-            <Terminal className="w-4 h-4" />
-            Agent MCP Connect
-          </button>
+          {/* Group 3: Connection, Docs & Pricing */}
+          <div className="flex items-center gap-1.5 bg-slate-950/70 p-1 rounded-xl border border-slate-800/80">
+            <button
+              onClick={() => setActiveTab("mcp")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "mcp"
+                  ? "bg-slate-700 text-white shadow-md"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+              }`}
+            >
+              <Terminal className="w-3.5 h-3.5" />
+              Agent MCP
+            </button>
 
-          <button
-            onClick={() => setActiveTab("help")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "help"
-                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
-                : "bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-            }`}
-          >
-            <HelpCircle className="w-4 h-4" />
-            📖 User & MCP Guide
-          </button>
+            <button
+              onClick={() => setActiveTab("help")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "help"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+              }`}
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              📖 User Guide
+            </button>
 
-          <button
-            onClick={() => setActiveTab("billing")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "billing"
-                ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20"
-                : "bg-slate-900/60 text-emerald-400 hover:text-emerald-300 hover:bg-slate-800 border border-emerald-500/20"
-            }`}
-          >
-            <CreditCard className="w-4 h-4 text-emerald-400" />
-            💎 Pricing & API Keys
-          </button>
+            <button
+              onClick={() => setActiveTab("billing")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "billing"
+                  ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20"
+                  : "text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60"
+              }`}
+            >
+              <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+              💳 Subscriptions & API Keys
+            </button>
+          </div>
 
           {/* GATED FOUNDER / ADMIN TABS (Only visible when unlocked) */}
           {isAdminUnlocked && (
-            <>
-              <div className="h-6 w-[1px] bg-amber-500/40 mx-1 hidden sm:block"></div>
-              
+            <div className="flex items-center gap-1.5 bg-amber-950/20 p-1 rounded-xl border border-amber-500/30">
               <button
                 onClick={() => setActiveTab("marketing")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === "marketing"
-                    ? "bg-gradient-to-r from-pink-500 to-rose-600 text-white shadow-lg shadow-pink-500/20"
-                    : "bg-pink-950/40 text-pink-300 hover:text-pink-200 hover:bg-pink-900/60 border border-pink-500/30"
+                    ? "bg-gradient-to-r from-pink-500 to-rose-600 text-white shadow-md shadow-pink-500/20"
+                    : "text-pink-300 hover:text-pink-200 hover:bg-pink-900/40"
                 }`}
               >
-                <Megaphone className="w-4 h-4" />
-                👑 📢 Auto-Promotions
+                <Megaphone className="w-3.5 h-3.5" />
+                👑 📢 Promotions
               </button>
 
               <button
                 onClick={() => setActiveTab("management")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === "management"
-                    ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20"
-                    : "bg-cyan-950/40 text-cyan-300 hover:text-cyan-200 hover:bg-cyan-900/60 border border-cyan-500/30"
+                    ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/20"
+                    : "text-cyan-300 hover:text-cyan-200 hover:bg-cyan-900/40"
                 }`}
               >
-                <Settings2 className="w-4 h-4" />
-                👑 ⚙️ Service Management
+                <Settings2 className="w-3.5 h-3.5" />
+                👑 ⚙️ Service Ops
               </button>
-            </>
+            </div>
           )}
         </div>
 

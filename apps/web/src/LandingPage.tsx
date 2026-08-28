@@ -276,11 +276,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
             </button>
 
             <button
-              onClick={() => onEnterStudio("billing")}
+              onClick={() => {
+                const el = document.getElementById("pricing");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+                else onEnterStudio("billing");
+              }}
               className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 transition-all cursor-pointer"
             >
               <CreditCard className="w-4 h-4 text-emerald-400" />
-              <span>API Keys ($49/mo)</span>
+              <span>Pricing & Plans</span>
             </button>
 
             <button
@@ -542,6 +546,178 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
                 Fractional $0.005/query autonomous agent key provisioning, live Stripe subscriptions, and metered quotas.
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* SECTION: TRANSPARENT PRICING & SUBSCRIPTION PLANS */}
+        <div id="pricing" className="w-full max-w-5xl pt-16 space-y-8">
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold uppercase tracking-wider">
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Transparent, Predictable Pricing</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
+              Fuel Your Autonomous Agents at the Edge
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400 max-w-2xl mx-auto">
+              Choose the right tier for your agent fleet or software workloads. Zero hidden lock-in, cancel anytime, backed by Stripe.
+            </p>
+          </div>
+
+          {/* Pricing Grid */}
+          <div className="grid md:grid-cols-3 gap-6 text-left">
+            {/* Free Starter */}
+            <div className="bg-[#0b101d]/90 border border-slate-800 rounded-3xl p-6 space-y-6 flex flex-col justify-between shadow-xl backdrop-blur-md hover:border-slate-700 transition-all">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono text-slate-400 uppercase tracking-wider">Hobby / Dev</span>
+                  <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-bold">
+                    FREE
+                  </span>
+                </div>
+                <div>
+                  <div className="text-3xl sm:text-4xl font-black text-white">$0</div>
+                  <div className="text-xs text-slate-400 mt-1">Free forever for exploratory testing</div>
+                </div>
+                <ul className="space-y-2.5 text-xs text-slate-300 pt-2 border-t border-slate-800/80">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>50 queries / day</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>Public Dev, Pricing & Zoning feeds</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>Standard MCP & REST access</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>Global Cloudflare edge caching</span>
+                  </li>
+                </ul>
+              </div>
+
+              <button
+                onClick={() => onEnterStudio("playground")}
+                className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs border border-slate-700 transition-all cursor-pointer text-center"
+              >
+                Explore Free Studio
+              </button>
+            </div>
+
+            {/* Pro Builder (Highlighted) */}
+            <div className="relative bg-gradient-to-b from-slate-900 via-[#0b101d] to-[#0b101d] border-2 border-emerald-500 rounded-3xl p-6 space-y-6 flex flex-col justify-between shadow-2xl shadow-emerald-500/10 transform hover:scale-[1.02] transition-all">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] tracking-wider uppercase shadow-lg">
+                Most Popular
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono text-emerald-400 uppercase tracking-wider">Data Refinery Pro</span>
+                  <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
+                    PRO BUILDER
+                  </span>
+                </div>
+                <div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl sm:text-4xl font-black text-white">$49</span>
+                    <span className="text-xs text-slate-400">/ month</span>
+                  </div>
+                  <div className="text-xs text-slate-400 mt-1">For AI startups, agent builders, and production apps</div>
+                </div>
+                <ul className="space-y-2.5 text-xs text-slate-200 pt-2 border-t border-slate-800/80">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span><strong>10,000</strong> refined queries / month</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>Priority Workers AI Llama 3.3-70B</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>Live AST Breaking Changes & Diffs</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>Visual Schema Studio & Custom Schemas</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>Multi-agent MCP concurrency support</span>
+                  </li>
+                </ul>
+              </div>
+
+              <button
+                onClick={() => onEnterStudio("billing")}
+                className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer text-center"
+              >
+                Subscribe with Stripe ($49/mo)
+              </button>
+            </div>
+
+            {/* Enterprise Custom */}
+            <div className="bg-[#0b101d]/90 border border-slate-800 rounded-3xl p-6 space-y-6 flex flex-col justify-between shadow-xl backdrop-blur-md hover:border-slate-700 transition-all">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono text-purple-400 uppercase tracking-wider">Enterprise PaaS</span>
+                  <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold">
+                    CUSTOM SLA
+                  </span>
+                </div>
+                <div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl sm:text-4xl font-black text-white">$299+</span>
+                    <span className="text-xs text-slate-400">/ month</span>
+                  </div>
+                  <div className="text-xs text-slate-400 mt-1">Dedicated private edge zones & custom SLAs</div>
+                </div>
+                <ul className="space-y-2.5 text-xs text-slate-300 pt-2 border-t border-slate-800/80">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                    <span><strong>100,000+</strong> queries / month</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                    <span>Dedicated private D1 SQL & Vectorize</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                    <span>Custom Webhooks & 99.998% Uptime SLA</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                    <span>Dedicated Engineering Slack channel</span>
+                  </li>
+                </ul>
+              </div>
+
+              <a
+                href="mailto:sales@freshbeats.ai?subject=Universal%20Data%20Refinery%20Enterprise%20Inquiry"
+                className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-purple-300 font-bold text-xs border border-purple-500/30 transition-all cursor-pointer text-center block"
+              >
+                Contact Enterprise Sales
+              </a>
+            </div>
+          </div>
+
+          {/* Autonomous AI Micropayment Strip */}
+          <div className="bg-slate-950/80 border border-slate-800/90 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono">
+            <div className="flex items-center gap-2.5 text-slate-300">
+              <Bot className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+              <span>
+                <strong>Autonomous Agent Wallet?</strong> Pay per query on demand ($0.005/call) via <code className="text-cyan-300">X-402-Payment</code> header.
+              </span>
+            </div>
+            <button
+              onClick={() => onEnterStudio("help")}
+              className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 whitespace-nowrap cursor-pointer"
+            >
+              View HTTP 402 Spec →
+            </button>
           </div>
         </div>
       </main>
