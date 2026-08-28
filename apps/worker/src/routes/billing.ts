@@ -4,6 +4,16 @@ import { createStripeCheckoutSession, generateApiKey, getStripeCheckoutSession }
 
 export const billingRouter = new Hono<{ Bindings: Env }>();
 
+// 0. Public Dynamic Pricing Plans
+billingRouter.get("/plans", async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare("SELECT * FROM pricing_plans ORDER BY price_usd ASC").all();
+    return c.json({ status: "success", plans: results || [] });
+  } catch (err: any) {
+    return c.json({ error: "Failed to fetch pricing plans", details: err.message }, 500);
+  }
+});
+
 // 1. Create a Stripe Checkout Session
 billingRouter.post("/create-checkout", async (c) => {
   const body = await c.req.json().catch(() => ({}));
@@ -11,11 +21,28 @@ billingRouter.post("/create-checkout", async (c) => {
   const redirectOrigin = body.origin || "https://drefinery.freshbeats.ai";
 
   const secretKey = c.env.STRIPE_SECRET_KEY || "";
-  const priceId = c.env.STRIPE_PRO_PRICE_ID || "price_1U7oWJ2aItc9d3fFL5KoOsLv";
+  let priceId = c.env.STRIPE_PRO_PRICE_ID || "price_1U7oWJ2aItc9d3fFL5KoOsLv";
+  let unitAmountCents: number | undefined = undefined;
+  let productName = "Universal Data Refinery Pro";
+
+  try {
+    const proPlan: any = await c.env.DB.prepare("SELECT * FROM pricing_plans WHERE id = 'PRO' LIMIT 1").first();
+    if (proPlan) {
+      productName = proPlan.name || productName;
+      if (proPlan.stripe_price_id) {
+        priceId = proPlan.stripe_price_id;
+      }
+      if (proPlan.price_usd && proPlan.price_usd > 0) {
+        unitAmountCents = Math.round(proPlan.price_usd * 100);
+      }
+    }
+  } catch {}
 
   try {
     const session = await createStripeCheckoutSession(secretKey, {
       priceId,
+      unitAmountCents,
+      productName,
       customerEmail: email,
       successUrl: `${redirectOrigin}?session_id={CHECKOUT_SESSION_ID}&checkout=success`,
       cancelUrl: `${redirectOrigin}?checkout=cancelled`

@@ -50,7 +50,12 @@ import {
   FileCode,
   ShoppingBag,
   Download,
-  Server
+  Server,
+  ShieldAlert,
+  Edit3,
+  Save,
+  Coins,
+  History
 } from "lucide-react";
 import { LandingPage } from "./LandingPage";
 
@@ -944,25 +949,121 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
   const [testingWebhook, setTestingWebhook] = useState(false);
   const [registeringWebhook, setRegisteringWebhook] = useState(false);
 
+  // Dynamic Pricing & Accounts Governance State
+  const [pricingPlans, setPricingPlans] = useState<any[]>([]);
+  const [humanUsers, setHumanUsers] = useState<any[]>([]);
+  const [agentFleets, setAgentFleets] = useState<any[]>([]);
+  const [agentAuditLogs, setAgentAuditLogs] = useState<any[]>([]);
+  const [founderSubTab, setFounderSubTab] = useState<"telemetry" | "humans" | "agents" | "pricing" | "logs" | "pipelines">("telemetry");
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editPlanPrice, setEditPlanPrice] = useState<number>(49);
+  const [editPlanQuota, setEditPlanQuota] = useState<number>(10000);
+  const [savingPlan, setSavingPlan] = useState(false);
+
+  // Initial load of dynamic pricing plans
+  useEffect(() => {
+    fetch(`${API_BASE}/api/v1/billing/plans`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === "success" && data.plans) {
+          setPricingPlans(data.plans);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const fetchManagementData = async () => {
     setAnalyticsLoading(true);
     setPipelinesLoading(true);
     setWebhooksLoading(true);
     try {
-      const [aRes, pRes, wRes] = await Promise.all([
-        fetch(`${API_BASE}/api/v1/management/analytics`).then(r => r.json()),
-        fetch(`${API_BASE}/api/v1/management/pipelines`).then(r => r.json()),
-        fetch(`${API_BASE}/api/v1/management/webhooks`).then(r => r.json())
+      const [aRes, pRes, wRes, prRes, hRes, agRes, logRes] = await Promise.all([
+        fetch(`${API_BASE}/api/v1/management/analytics`).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/v1/management/pipelines`).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/v1/management/webhooks`).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/v1/management/pricing-plans`).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/v1/management/human-users`).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/v1/management/agent-fleets`).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/v1/management/agent-audit-logs`).then(r => r.json()).catch(() => ({}))
       ]);
       if (aRes.status === "success") setAnalyticsData(aRes.metrics);
       if (pRes.status === "success") setPipelines(pRes.pipelines || []);
       if (wRes.status === "success") setWebhooks(wRes.webhooks || []);
+      if (prRes.status === "success") setPricingPlans(prRes.plans || []);
+      if (hRes.status === "success") setHumanUsers(hRes.users || []);
+      if (agRes.status === "success") setAgentFleets(agRes.agents || []);
+      if (logRes.status === "success") setAgentAuditLogs(logRes.logs || []);
     } catch (err) {
       console.error("Management fetch error:", err);
     } finally {
       setAnalyticsLoading(false);
       setPipelinesLoading(false);
       setWebhooksLoading(false);
+    }
+  };
+
+  const handleSavePlanPrice = async (planId: string, price: number, quota: number) => {
+    setSavingPlan(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/management/pricing-plans`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: planId,
+          price_usd: price,
+          included_queries: quota
+        })
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        setPricingPlans(prev => prev.map(p => p.id === planId ? { ...p, price_usd: price, included_queries: quota } : p));
+        setEditingPlanId(null);
+      }
+    } catch (err) {
+      console.error("Failed to save plan price:", err);
+    } finally {
+      setSavingPlan(false);
+    }
+  };
+
+  const handleToggleHumanKey = async (id: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/management/human-users/${id}/toggle`, { method: "POST" });
+      const data = await res.json();
+      if (data.status === "success") {
+        setHumanUsers(prev => prev.map(u => u.id === id ? { ...u, status: data.userStatus } : u));
+      }
+    } catch (err) {
+      console.error("Failed to toggle human key:", err);
+    }
+  };
+
+  const handleTopupAgent = async (id: string, credits: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/management/agent-fleets/${id}/topup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ addCredits: credits })
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        setAgentFleets(prev => prev.map(a => a.id === id ? { ...a, allowance: (a.allowance || 0) + credits, status: "ACTIVE" } : a));
+      }
+    } catch (err) {
+      console.error("Failed to topup agent:", err);
+    }
+  };
+
+  const handleKillAgent = async (id: string) => {
+    if (!window.confirm("Activate Emergency Kill-Switch for this AI agent? Its token will be immediately terminated.")) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/management/agent-fleets/${id}/kill`, { method: "POST" });
+      const data = await res.json();
+      if (data.status === "success") {
+        setAgentFleets(prev => prev.map(a => a.id === id ? { ...a, status: "REVOKED" } : a));
+      }
+    } catch (err) {
+      console.error("Failed to kill agent:", err);
     }
   };
 
@@ -3507,9 +3608,23 @@ const docs = await reader.loadData({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-white">Data Refinery Pro</span>
+                    {isAdminUnlocked && (
+                      <button
+                        onClick={() => {
+                          setActiveTab("management");
+                          setFounderSubTab("pricing");
+                        }}
+                        className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all cursor-pointer"
+                        title="Edit Price in Founder Console"
+                      >
+                        <Edit3 className="w-3 h-3" /> Edit Price
+                      </button>
+                    )}
                   </div>
                   <div>
-                    <span className="text-4xl font-black text-white">$49</span>
+                    <span className="text-4xl font-black text-white">
+                      ${pricingPlans.find(p => p.id === "PRO")?.price_usd ?? 49}
+                    </span>
                     <span className="text-xs text-slate-300"> / month</span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
@@ -3518,7 +3633,7 @@ const docs = await reader.loadData({
                   <div className="space-y-2.5 text-xs pt-2">
                     <div className="flex items-center gap-2 text-slate-200 font-medium">
                       <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                      <span><strong>10,000 refined queries</strong> / month</span>
+                      <span><strong>{(pricingPlans.find(p => p.id === "PRO")?.included_queries ?? 10000).toLocaleString()} refined queries</strong> / month</span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-200">
                       <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
@@ -3542,7 +3657,7 @@ const docs = await reader.loadData({
                 <button
                   onClick={handleSubscribePro}
                   disabled={checkoutLoading}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   {checkoutLoading ? (
                     <>
@@ -3552,7 +3667,7 @@ const docs = await reader.loadData({
                   ) : (
                     <>
                       <CreditCard className="w-4 h-4" />
-                      Subscribe with Stripe ($49/mo)
+                      Subscribe with Stripe (${pricingPlans.find(p => p.id === "PRO")?.price_usd ?? 49}/mo)
                     </>
                   )}
                 </button>
@@ -3563,12 +3678,28 @@ const docs = await reader.loadData({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-slate-200">Enterprise PaaS</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                      Custom
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        Custom
+                      </span>
+                      {isAdminUnlocked && (
+                        <button
+                          onClick={() => {
+                            setActiveTab("management");
+                            setFounderSubTab("pricing");
+                          }}
+                          className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all cursor-pointer"
+                          title="Edit Price in Founder Console"
+                        >
+                          <Edit3 className="w-3 h-3" /> Edit
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div>
-                    <span className="text-3xl font-black text-white">$299+</span>
+                    <span className="text-3xl font-black text-white">
+                      ${pricingPlans.find(p => p.id === "ENTERPRISE")?.price_usd ?? 299}+
+                    </span>
                     <span className="text-xs text-slate-400"> / month</span>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
@@ -3577,7 +3708,7 @@ const docs = await reader.loadData({
                   <div className="space-y-2 text-xs pt-2">
                     <div className="flex items-center gap-2 text-slate-300">
                       <Check className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                      <span>100,000+ queries / month</span>
+                      <span>{(pricingPlans.find(p => p.id === "ENTERPRISE")?.included_queries ?? 100000).toLocaleString()}+ queries / month</span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-300">
                       <Check className="w-4 h-4 text-purple-400 flex-shrink-0" />
@@ -3592,7 +3723,7 @@ const docs = await reader.loadData({
 
                 <a
                   href="mailto:support@freshbeats.ai?subject=Enterprise%20Data%20Refinery%20Inquiry"
-                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs text-center block transition-colors"
+                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs text-center block transition-colors cursor-pointer"
                 >
                   Contact Enterprise Sales
                 </a>
@@ -3732,18 +3863,18 @@ const docs = await reader.loadData({
           </div>
         )}
 
-        {/* TAB 9: SERVICE MANAGEMENT & FOUNDER OPS */}
+        {/* TAB 9: UNIFIED FOUNDER CONSOLE (HUMANS, AI FLEETS, DYNAMIC PRICING & TELEMETRY) */}
         {activeTab === "management" && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h2 className="text-xl font-black text-white flex items-center gap-2.5">
-                  <Settings2 className="w-5 h-5 text-cyan-400" />
-                  Service Management & Autonomous Pipeline Hub
+                  <Settings2 className="w-5 h-5 text-amber-400" />
+                  Founder Console & SaaS Operations
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  Manage your edge analytics, recurring background crawlers, outbound Discord/Slack webhooks, and metered API quotas.
+                  Unified command center for paying human customers, autonomous AI agent fleets, dynamic Stripe pricing, and edge telemetry.
                 </p>
               </div>
 
@@ -3752,303 +3883,886 @@ const docs = await reader.loadData({
                 disabled={analyticsLoading}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-2 border border-slate-700 transition-colors cursor-pointer"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${analyticsLoading ? "animate-spin text-cyan-400" : ""}`} />
-                Refresh Management Metrics
+                <RefreshCw className={`w-3.5 h-3.5 ${analyticsLoading ? "animate-spin text-amber-400" : ""}`} />
+                Refresh Telemetry & Accounts
               </button>
             </div>
 
-            {/* SECTION 1: LIVE ANALYTICS & EDGE METRICS */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-cyan-400" />
-                Live Edge Analytics & Quota Consumption
-              </h3>
+            {/* Founder Sub-Navigation Ribbon */}
+            <div className="flex items-center gap-2 border-b border-slate-800/80 pb-3 overflow-x-auto">
+              <button
+                onClick={() => setFounderSubTab("telemetry")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  founderSubTab === "telemetry"
+                    ? "bg-cyan-600 text-white shadow-md shadow-cyan-600/20"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
+                📊 Edge Telemetry
+              </button>
 
-              {/* KPI Badges */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 space-y-2">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Metered Pro Quota</div>
-                  <div className="text-2xl font-black text-white font-mono flex items-baseline gap-2">
-                    <span>{analyticsData?.totalQueries || 18}</span>
-                    <span className="text-xs text-slate-500 font-normal">/ 10,000 mo</span>
-                  </div>
-                  <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, Math.max(5, ((analyticsData?.totalQueries || 18) / 10000) * 100))}%` }}></div>
-                  </div>
-                </div>
+              <button
+                onClick={() => setFounderSubTab("humans")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  founderSubTab === "humans"
+                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 text-emerald-400" />
+                👥 Human Customers ({humanUsers.length})
+              </button>
 
-                <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 space-y-2">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Avg Edge Response Latency</div>
-                  <div className="text-2xl font-black text-cyan-400 font-mono">
-                    {analyticsData?.avgEdgeLatencyMs || 16} <span className="text-xs font-normal text-slate-400">ms</span>
-                  </div>
-                  <div className="text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
-                    <Zap className="w-3 h-3" /> Powered by V8 Edge Isolates
-                  </div>
-                </div>
+              <button
+                onClick={() => setFounderSubTab("agents")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  founderSubTab === "agents"
+                    ? "bg-purple-600 text-white shadow-md shadow-purple-600/20"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                }`}
+              >
+                <Bot className="w-3.5 h-3.5 text-purple-400" />
+                🤖 AI Agent Fleets ({agentFleets.length})
+              </button>
 
-                <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 space-y-2">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Cache Hit Ratio</div>
-                  <div className="text-2xl font-black text-emerald-400 font-mono">
-                    {analyticsData?.edgeCacheHitRate || "99.4%"}
-                  </div>
-                  <div className="text-[11px] text-slate-400">Workers KV Microsecond Tier</div>
-                </div>
+              <button
+                onClick={() => setFounderSubTab("pricing")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  founderSubTab === "pricing"
+                    ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-extrabold"
+                    : "text-amber-400 hover:text-amber-300 hover:bg-slate-800/60"
+                }`}
+              >
+                <DollarSign className="w-3.5 h-3.5 text-amber-400" />
+                💳 Dynamic Pricing & Stripe
+              </button>
 
-                <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 space-y-2">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Pipeline Crawlers</div>
-                  <div className="text-2xl font-black text-indigo-400 font-mono">
-                    {pipelines.filter(p => p.status === "ACTIVE").length || 3}
-                  </div>
-                  <div className="text-[11px] text-slate-400">Running on 6h/12h Scheduled Crons</div>
-                </div>
-              </div>
+              <button
+                onClick={() => setFounderSubTab("logs")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  founderSubTab === "logs"
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                }`}
+              >
+                <History className="w-3.5 h-3.5 text-indigo-400" />
+                📜 Agent Audit Stream ({agentAuditLogs.length})
+              </button>
 
-              {/* 14-Day Activity Bar Chart */}
-              {analyticsData?.dailySeries && (
-                <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs font-bold text-white flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-cyan-400" />
-                      14-Day Query Volume & Autonomous Ingestion Trends
-                    </div>
-                    <span className="text-[11px] text-slate-400 font-mono">Real-time D1 Telemetry</span>
-                  </div>
-
-                  <div className="flex items-end justify-between gap-2 pt-6 h-36 border-b border-slate-800/80 pb-2">
-                    {analyticsData.dailySeries.map((item: any, idx: number) => {
-                      const maxVal = 80;
-                      const heightPct = Math.min(100, Math.max(15, (item.queries / maxVal) * 100));
-                      return (
-                        <div key={idx} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                          <div className="text-[10px] font-mono text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {item.queries}
-                          </div>
-                          <div
-                            style={{ height: `${heightPct}%` }}
-                            className="w-full max-w-[28px] rounded-t-md bg-gradient-to-t from-cyan-600 to-blue-400 group-hover:from-cyan-400 group-hover:to-teal-300 transition-all cursor-pointer shadow-lg shadow-cyan-500/10"
-                            title={`${item.date}: ${item.queries} queries (${item.latencyMs}ms avg latency)`}
-                          ></div>
-                          <span className="text-[9px] text-slate-500 font-mono truncate w-full text-center">{item.date}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={() => setFounderSubTab("pipelines")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  founderSubTab === "pipelines"
+                    ? "bg-slate-700 text-white shadow-md"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5 text-orange-400" />
+                ⚙️ Pipelines & Webhooks ({pipelines.length})
+              </button>
             </div>
 
-            {/* SECTION 2: RECURRING PIPELINE SCHEDULER */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+            {/* SUBTAB 1: EDGE TELEMETRY */}
+            {founderSubTab === "telemetry" && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 space-y-2">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Metered Pro Quota</div>
+                    <div className="text-2xl font-black text-white font-mono flex items-baseline gap-2">
+                      <span>{analyticsData?.totalQueries || 18}</span>
+                      <span className="text-xs text-slate-500 font-normal">/ 10,000 mo</span>
+                    </div>
+                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, Math.max(5, ((analyticsData?.totalQueries || 18) / 10000) * 100))}%` }}></div>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 space-y-2">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Avg Edge Latency</div>
+                    <div className="text-2xl font-black text-cyan-400 font-mono">
+                      {analyticsData?.avgEdgeLatencyMs || 16} <span className="text-xs font-normal text-slate-400">ms</span>
+                    </div>
+                    <div className="text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
+                      <Zap className="w-3 h-3" /> Powered by V8 Edge Isolates
+                    </div>
+                  </div>
+
+                  <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 space-y-2">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Cache Hit Ratio</div>
+                    <div className="text-2xl font-black text-emerald-400 font-mono">
+                      {analyticsData?.edgeCacheHitRate || "99.4%"}
+                    </div>
+                    <div className="text-[11px] text-slate-400">Workers KV Microsecond Tier</div>
+                  </div>
+
+                  <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 space-y-2">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Agent Fleets</div>
+                    <div className="text-2xl font-black text-purple-400 font-mono">
+                      {agentFleets.length || 1}
+                    </div>
+                    <div className="text-[11px] text-slate-400">HTTP 402 Autonomous Micro-Wallets</div>
+                  </div>
+                </div>
+
+                {/* 14-Day Activity Bar Chart */}
+                {analyticsData?.dailySeries && (
+                  <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-bold text-white flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-cyan-400" />
+                        14-Day Query Volume & Autonomous Ingestion Trends
+                      </div>
+                      <span className="text-[11px] text-slate-400 font-mono">Real-time D1 Telemetry</span>
+                    </div>
+
+                    <div className="flex items-end justify-between gap-2 pt-6 h-36 border-b border-slate-800/80 pb-2">
+                      {analyticsData.dailySeries.map((item: any, idx: number) => {
+                        const maxVal = 80;
+                        const heightPct = Math.min(100, Math.max(15, (item.queries / maxVal) * 100));
+                        return (
+                          <div key={idx} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                            <div className="text-[10px] font-mono text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {item.queries}
+                            </div>
+                            <div
+                              style={{ height: `${heightPct}%` }}
+                              className="w-full max-w-[28px] rounded-t-md bg-gradient-to-t from-cyan-600 to-blue-400 group-hover:from-cyan-400 group-hover:to-teal-300 transition-all cursor-pointer shadow-lg shadow-cyan-500/10"
+                              title={`${item.date}: ${item.queries} queries (${item.latencyMs}ms avg latency)`}
+                            ></div>
+                            <span className="text-[9px] text-slate-500 font-mono truncate w-full text-center">{item.date}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* SUBTAB 2: HUMAN CUSTOMERS & SUBSCRIPTIONS */}
+            {founderSubTab === "humans" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Users className="w-4 h-4 text-emerald-400" />
+                      Paying Human Customers & Accounts
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Developers, founders, and companies with active Stripe subscriptions and API keys.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-[#0f172a] border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-slate-950 text-slate-400 font-mono text-[11px] uppercase border-b border-slate-800">
+                        <tr>
+                          <th className="p-4">Customer Email</th>
+                          <th className="p-4">Plan Tier</th>
+                          <th className="p-4">Quota Usage</th>
+                          <th className="p-4">Stripe Customer</th>
+                          <th className="p-4">Status</th>
+                          <th className="p-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-mono text-xs">
+                        {humanUsers.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="p-6 text-center text-slate-500 font-sans">
+                              No registered human customers yet. New signups through Stripe checkout will appear here automatically.
+                            </td>
+                          </tr>
+                        ) : (
+                          humanUsers.map((user) => (
+                            <tr key={user.id} className="hover:bg-slate-900/50 transition-colors">
+                              <td className="p-4">
+                                <div className="font-bold text-white font-sans">{user.user_email}</div>
+                                <div className="text-[10px] text-slate-500 font-mono">{user.key_value.slice(0, 16)}...</div>
+                              </td>
+                              <td className="p-4">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  user.plan === "PRO" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-purple-500/10 text-purple-400 border border-purple-500/30"
+                                }`}>
+                                  {user.plan}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <span className="text-white font-bold">{user.current_usage}</span> / {user.monthly_quota.toLocaleString()}
+                              </td>
+                              <td className="p-4 text-slate-400 text-[11px]">
+                                {user.stripe_customer_id || "Direct Seed"}
+                              </td>
+                              <td className="p-4">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  user.status === "ACTIVE" ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-red-950 text-red-400 border border-red-800"
+                                }`}>
+                                  {user.status}
+                                </span>
+                              </td>
+                              <td className="p-4 text-right">
+                                <button
+                                  onClick={() => handleToggleHumanKey(user.id)}
+                                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                                    user.status === "ACTIVE"
+                                      ? "bg-slate-800 hover:bg-red-950 hover:text-red-300 text-slate-300"
+                                      : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                                  }`}
+                                >
+                                  {user.status === "ACTIVE" ? "Suspend Key" : "Re-activate"}
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUBTAB 3: AUTONOMOUS AI AGENT FLEETS */}
+            {founderSubTab === "agents" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Bot className="w-4 h-4 text-purple-400" />
+                      Autonomous AI Agent Fleets & Micro-Wallets
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Autonomous agents consuming live edge machine fuel via Model Context Protocol (MCP) and HTTP 402 digital wallets.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-[#0f172a] border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-slate-950 text-slate-400 font-mono text-[11px] uppercase border-b border-slate-800">
+                        <tr>
+                          <th className="p-4">Agent Identity & Owner</th>
+                          <th className="p-4">Token ID</th>
+                          <th className="p-4">Wallet Balance</th>
+                          <th className="p-4">Protocol</th>
+                          <th className="p-4">Status</th>
+                          <th className="p-4 text-right">Governance Controls</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-mono text-xs">
+                        {agentFleets.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="p-6 text-center text-slate-500 font-sans">
+                              No agent micro-wallets generated yet. Create one via the Autonomous Agent Generator in the Subscriptions tab.
+                            </td>
+                          </tr>
+                        ) : (
+                          agentFleets.map((agent) => (
+                            <tr key={agent.id} className="hover:bg-slate-900/50 transition-colors">
+                              <td className="p-4">
+                                <div className="font-bold text-white font-sans flex items-center gap-2">
+                                  <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                                  <span>{agent.agent_identity || "Autonomous_Agent"}</span>
+                                </div>
+                                <div className="text-[10px] text-slate-500">Created: {agent.created_at?.slice(0, 10)}</div>
+                              </td>
+                              <td className="p-4">
+                                <code className="text-cyan-300 text-[11px] bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                                  {agent.key_value.slice(0, 18)}...
+                                </code>
+                              </td>
+                              <td className="p-4">
+                                <span className="text-emerald-400 font-bold">{agent.allowance - agent.current_usage}</span>
+                                <span className="text-slate-500 text-[10px]"> / {agent.allowance} credits</span>
+                              </td>
+                              <td className="p-4">
+                                <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 text-[10px] font-bold">
+                                  HTTP-402 / MCP
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  agent.status === "ACTIVE" ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-red-950 text-red-400 border border-red-800"
+                                }`}>
+                                  {agent.status}
+                                </span>
+                              </td>
+                              <td className="p-4 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => handleTopupAgent(agent.id, 500)}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-900/40 hover:bg-emerald-800 text-emerald-300 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                                    title="Add 500 query credits to this agent"
+                                  >
+                                    <Coins className="w-3 h-3" /> +500 Credits
+                                  </button>
+                                  {agent.status === "ACTIVE" && (
+                                    <button
+                                      onClick={() => handleKillAgent(agent.id)}
+                                      className="px-2.5 py-1 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-300 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                                      title="Immediately revoke and kill this agent token"
+                                    >
+                                      <ShieldAlert className="w-3 h-3" /> Kill-Switch
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUBTAB 4: DYNAMIC PRICING & STRIPE CONTROLS */}
+            {founderSubTab === "pricing" && (
+              <div className="space-y-6">
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-amber-400" />
-                    &ldquo;Set-and-Forget&rdquo; Recurring Crawl Pipelines
+                    <DollarSign className="w-4 h-4 text-amber-400" />
+                    Dynamic Pricing Configuration & Stripe Integration
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Schedule websites, changelogs, or pricing pages to continuously refine and compute semantic diffs automatically.
+                    Modify prices and quotas dynamically. Changes saved here take effect immediately across the Landing Page, the Subscriptions tab, and Stripe Checkout!
                   </p>
                 </div>
-              </div>
 
-              {/* Create Pipeline Form */}
-              <form onSubmit={handleCreatePipeline} className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4">
-                <div className="text-xs font-bold text-white flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-amber-400" />
-                  Schedule New Autonomous Pipeline
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">Pipeline Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. OpenAI SDK Releases"
-                      value={newPipeName}
-                      onChange={(e) => setNewPipeName(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">Target URL to Crawl *</label>
-                    <input
-                      type="url"
-                      required
-                      placeholder="https://..."
-                      value={newPipeUrl}
-                      onChange={(e) => setNewPipeUrl(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[11px] font-semibold text-slate-400 block mb-1">Category</label>
-                      <select
-                        value={newPipeDomain}
-                        onChange={(e) => setNewPipeDomain(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
-                      >
-                        <option value="developer">Developer SDK</option>
-                        <option value="pricing">B2B Pricing</option>
-                        <option value="regulatory">Regulatory/Gov</option>
-                        <option value="custom">Custom URL</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-semibold text-slate-400 block mb-1">Frequency</label>
-                      <select
-                        value={newPipeFreq}
-                        onChange={(e) => setNewPipeFreq(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
-                      >
-                        <option value="6">Every 6h</option>
-                        <option value="12">Every 12h</option>
-                        <option value="24">Every 24h</option>
-                        <option value="48">Every 48h</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <span className="text-[11px] text-slate-400">Worker AI will automatically calculate semantic delta diffs on every cycle.</span>
-                  <button
-                    type="submit"
-                    disabled={creatingPipeline}
-                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {creatingPipeline ? "Creating Pipeline..." : "+ Create Recurring Pipeline"}
-                  </button>
-                </div>
-              </form>
-
-              {/* Pipelines List */}
-              <div className="grid gap-3">
-                {pipelines.map((pipe) => (
-                  <div key={pipe.id} className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-white">{pipe.name}</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          pipe.status === "ACTIVE"
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                            : "bg-slate-800 text-slate-400 border border-slate-700"
-                        }`}>
-                          {pipe.status}
-                        </span>
-                        <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                          Every {pipe.frequency_hours}h
-                        </span>
-                      </div>
-                      <a href={pipe.target_url} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline truncate max-w-lg block flex items-center gap-1 font-mono">
-                        {pipe.target_url} <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-
-                    <div className="flex items-center gap-2 self-end md:self-auto">
-                      <button
-                        onClick={() => handleTogglePipeline(pipe.id)}
-                        className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
-                          pipe.status === "ACTIVE"
-                            ? "bg-slate-800 hover:bg-slate-700 text-amber-300"
-                            : "bg-emerald-900/50 hover:bg-emerald-800/50 text-emerald-300"
-                        }`}
-                        title={pipe.status === "ACTIVE" ? "Pause Pipeline" : "Resume Pipeline"}
-                      >
-                        {pipe.status === "ACTIVE" ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                        <span>{pipe.status === "ACTIVE" ? "Pause" : "Resume"}</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleDeletePipeline(pipe.id)}
-                        className="p-2 rounded-lg bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 transition-colors"
-                        title="Delete Pipeline"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* SECTION 3: WEBHOOKS & REAL-TIME ALERTS */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-purple-400" />
-                  Discord / Slack Webhooks & Alert Subscriptions
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Receive instant JSON webhook notifications whenever a CRITICAL breaking change or price hike is detected.
-                </p>
-              </div>
-
-              <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4">
-                <form onSubmit={handleRegisterWebhook} className="space-y-3">
-                  <label className="text-[11px] font-semibold text-slate-400 block">Outbound Webhook URL (Discord, Slack, or Custom Server)</label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="url"
-                      required
-                      placeholder="https://discord.com/api/webhooks/... or https://hooks.slack.com/..."
-                      value={newWebhookUrl}
-                      onChange={(e) => setNewWebhookUrl(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 font-mono"
-                    />
-                    <button
-                      type="submit"
-                      disabled={registeringWebhook}
-                      className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-lg shadow-purple-500/20 transition-colors flex-shrink-0 cursor-pointer disabled:opacity-50"
-                    >
-                      {registeringWebhook ? "Adding..." : "+ Add Webhook"}
-                    </button>
-                  </div>
-                </form>
-
-                {webhookTestStatus && (
-                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200">
-                    {webhookTestStatus}
-                  </div>
-                )}
-
-                {/* Webhooks list */}
-                {webhooks.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t border-slate-800/80">
-                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Webhook Destinations</div>
-                    <div className="grid gap-2">
-                      {webhooks.map((wh) => (
-                        <div key={wh.id} className="bg-slate-950 rounded-xl p-3 flex items-center justify-between gap-3 border border-slate-800">
-                          <div className="flex items-center gap-2 truncate">
-                            <Radio className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
-                            <span className="text-xs font-mono text-slate-300 truncate">{wh.webhook_url}</span>
+                <div className="grid md:grid-cols-3 gap-6">
+                  {/* Pro Plan Editor */}
+                  {(() => {
+                    const plan = pricingPlans.find(p => p.id === "PRO") || { id: "PRO", name: "Data Refinery Pro", price_usd: 49, included_queries: 10000 };
+                    const isEditing = editingPlanId === "PRO";
+                    return (
+                      <div className="bg-[#0f172a] border border-emerald-500/40 rounded-2xl p-6 space-y-4 flex flex-col justify-between shadow-xl">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-emerald-400 font-mono uppercase">Pro Plan</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">
+                              Stripe Dynamic
+                            </span>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <button
-                              onClick={() => handleTestWebhook(wh.webhook_url)}
-                              disabled={testingWebhook}
-                              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 text-xs font-semibold transition-colors"
-                            >
-                              Test Webhook
-                            </button>
-                            <button
-                              onClick={() => handleDeleteWebhook(wh.id)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+
+                          <div>
+                            <div className="text-xs text-slate-400 mb-1">Monthly Price ($ USD):</div>
+                            {isEditing ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl font-black text-white">$</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={editPlanPrice}
+                                  onChange={(e) => setEditPlanPrice(Number(e.target.value))}
+                                  className="w-24 bg-slate-950 border border-emerald-500 rounded-lg px-2.5 py-1 text-xl font-black text-white font-mono"
+                                />
+                                <span className="text-xs text-slate-400">/ mo</span>
+                              </div>
+                            ) : (
+                              <div className="text-3xl font-black text-white font-mono">${plan.price_usd} <span className="text-xs font-normal text-slate-400">/ mo</span></div>
+                            )}
+                          </div>
+
+                          <div>
+                            <div className="text-xs text-slate-400 mb-1">Included Queries:</div>
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                step="1000"
+                                value={editPlanQuota}
+                                onChange={(e) => setEditPlanQuota(Number(e.target.value))}
+                                className="w-full bg-slate-950 border border-emerald-500 rounded-lg px-2.5 py-1 text-xs text-white font-mono"
+                              />
+                            ) : (
+                              <div className="text-xs text-emerald-300 font-bold">{plan.included_queries.toLocaleString()} queries / month</div>
+                            )}
                           </div>
                         </div>
-                      ))}
+
+                        <div>
+                          {isEditing ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleSavePlanPrice("PRO", editPlanPrice, editPlanQuota)}
+                                disabled={savingPlan}
+                                className="flex-1 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                              >
+                                <Save className="w-3.5 h-3.5" />
+                                {savingPlan ? "Saving..." : "Save to Stripe & DB"}
+                              </button>
+                              <button
+                                onClick={() => setEditingPlanId(null)}
+                                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setEditingPlanId("PRO");
+                                setEditPlanPrice(plan.price_usd);
+                                setEditPlanQuota(plan.included_queries);
+                              }}
+                              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-500/30 transition-colors cursor-pointer"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" /> Edit Pro Price
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Enterprise Plan Editor */}
+                  {(() => {
+                    const plan = pricingPlans.find(p => p.id === "ENTERPRISE") || { id: "ENTERPRISE", name: "Enterprise PaaS", price_usd: 299, included_queries: 100000 };
+                    const isEditing = editingPlanId === "ENTERPRISE";
+                    return (
+                      <div className="bg-[#0f172a] border border-purple-500/40 rounded-2xl p-6 space-y-4 flex flex-col justify-between shadow-xl">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-purple-400 font-mono uppercase">Enterprise PaaS</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 font-mono">
+                              Dedicated
+                            </span>
+                          </div>
+
+                          <div>
+                            <div className="text-xs text-slate-400 mb-1">Monthly Starting Price ($ USD):</div>
+                            {isEditing ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl font-black text-white">$</span>
+                                <input
+                                  type="number"
+                                  min="50"
+                                  value={editPlanPrice}
+                                  onChange={(e) => setEditPlanPrice(Number(e.target.value))}
+                                  className="w-24 bg-slate-950 border border-purple-500 rounded-lg px-2.5 py-1 text-xl font-black text-white font-mono"
+                                />
+                                <span className="text-xs text-slate-400">/ mo</span>
+                              </div>
+                            ) : (
+                              <div className="text-3xl font-black text-white font-mono">${plan.price_usd}+ <span className="text-xs font-normal text-slate-400">/ mo</span></div>
+                            )}
+                          </div>
+
+                          <div>
+                            <div className="text-xs text-slate-400 mb-1">Included Queries:</div>
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                step="10000"
+                                value={editPlanQuota}
+                                onChange={(e) => setEditPlanQuota(Number(e.target.value))}
+                                className="w-full bg-slate-950 border border-purple-500 rounded-lg px-2.5 py-1 text-xs text-white font-mono"
+                              />
+                            ) : (
+                              <div className="text-xs text-purple-300 font-bold">{plan.included_queries.toLocaleString()}+ queries / month</div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          {isEditing ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleSavePlanPrice("ENTERPRISE", editPlanPrice, editPlanQuota)}
+                                disabled={savingPlan}
+                                className="flex-1 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                              >
+                                <Save className="w-3.5 h-3.5" />
+                                {savingPlan ? "Saving..." : "Save Enterprise Price"}
+                              </button>
+                              <button
+                                onClick={() => setEditingPlanId(null)}
+                                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setEditingPlanId("ENTERPRISE");
+                                setEditPlanPrice(plan.price_usd);
+                                setEditPlanQuota(plan.included_queries);
+                              }}
+                              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-purple-500/30 transition-colors cursor-pointer"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" /> Edit Enterprise Price
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Autonomous Micro-Rate Editor */}
+                  {(() => {
+                    const plan = pricingPlans.find(p => p.id === "AGENT_MICRO") || { id: "AGENT_MICRO", name: "Autonomous Agent Wallet", price_usd: 0.005, included_queries: 1 };
+                    const isEditing = editingPlanId === "AGENT_MICRO";
+                    return (
+                      <div className="bg-[#0f172a] border border-cyan-500/40 rounded-2xl p-6 space-y-4 flex flex-col justify-between shadow-xl">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-cyan-400 font-mono uppercase">Agent Micro-Rate</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-mono">
+                              HTTP 402
+                            </span>
+                          </div>
+
+                          <div>
+                            <div className="text-xs text-slate-400 mb-1">Per-Query Micro Rate ($ USD):</div>
+                            {isEditing ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl font-black text-white">$</span>
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  min="0.001"
+                                  value={editPlanPrice}
+                                  onChange={(e) => setEditPlanPrice(Number(e.target.value))}
+                                  className="w-28 bg-slate-950 border border-cyan-500 rounded-lg px-2.5 py-1 text-xl font-black text-white font-mono"
+                                />
+                                <span className="text-xs text-slate-400">/ query</span>
+                              </div>
+                            ) : (
+                              <div className="text-3xl font-black text-white font-mono">${plan.price_usd} <span className="text-xs font-normal text-slate-400">/ query</span></div>
+                            )}
+                          </div>
+
+                          <div>
+                            <div className="text-xs text-slate-400 mb-1">Protocol:</div>
+                            <div className="text-xs text-cyan-300 font-bold">X-402-Payment / Digital Wallets</div>
+                          </div>
+                        </div>
+
+                        <div>
+                          {isEditing ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleSavePlanPrice("AGENT_MICRO", editPlanPrice, 1)}
+                                disabled={savingPlan}
+                                className="flex-1 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                              >
+                                <Save className="w-3.5 h-3.5" />
+                                {savingPlan ? "Saving..." : "Save Micro Rate"}
+                              </button>
+                              <button
+                                onClick={() => setEditingPlanId(null)}
+                                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setEditingPlanId("AGENT_MICRO");
+                                setEditPlanPrice(plan.price_usd);
+                                setEditPlanQuota(1);
+                              }}
+                              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-cyan-500/30 transition-colors cursor-pointer"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" /> Edit Micro Rate
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* SUBTAB 5: LIVE AGENT AUDIT & REQUEST STREAM */}
+            {founderSubTab === "logs" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <History className="w-4 h-4 text-indigo-400" />
+                      Live Agent Execution & Audit Telemetry Stream
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Real-time chronological telemetry of autonomous agents calling refinery tools, schemas, and endpoints.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-[#0f172a] border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-slate-950 text-slate-400 font-mono text-[11px] uppercase border-b border-slate-800">
+                        <tr>
+                          <th className="p-4">Timestamp</th>
+                          <th className="p-4">Agent Identity</th>
+                          <th className="p-4">Caller Email</th>
+                          <th className="p-4">Endpoint / Tool</th>
+                          <th className="p-4">Target Entity</th>
+                          <th className="p-4">Edge Latency</th>
+                          <th className="p-4">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-mono text-xs">
+                        {agentAuditLogs.map((log) => (
+                          <tr key={log.id} className="hover:bg-slate-900/50 transition-colors">
+                            <td className="p-4 text-slate-400 text-[11px]">
+                              {log.created_at}
+                            </td>
+                            <td className="p-4 font-sans font-bold text-white flex items-center gap-1.5">
+                              <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>{log.agent_name || "Agent"}</span>
+                            </td>
+                            <td className="p-4 text-slate-300">
+                              {log.user_email}
+                            </td>
+                            <td className="p-4">
+                              <code className="text-purple-300 text-[11px] bg-purple-950/40 px-2 py-0.5 rounded border border-purple-800/40">
+                                {log.endpoint}
+                              </code>
+                            </td>
+                            <td className="p-4 font-bold text-amber-300">
+                              {log.entity_symbol || "—"}
+                            </td>
+                            <td className="p-4 text-cyan-400 font-bold">
+                              {log.latency_ms} ms
+                            </td>
+                            <td className="p-4">
+                              <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold">
+                                {log.status_code} OK
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUBTAB 6: SCHEDULED PIPELINES & WEBHOOKS */}
+            {founderSubTab === "pipelines" && (
+              <div className="space-y-8">
+                {/* SECTION 2: RECURRING PIPELINE SCHEDULER */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-amber-400" />
+                        &ldquo;Set-and-Forget&rdquo; Recurring Crawl Pipelines
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Schedule websites, changelogs, or pricing pages to continuously refine and compute semantic diffs automatically.
+                      </p>
                     </div>
                   </div>
-                )}
+
+                  {/* Create Pipeline Form */}
+                  <form onSubmit={handleCreatePipeline} className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4">
+                    <div className="text-xs font-bold text-white flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-amber-400" />
+                      Schedule New Autonomous Pipeline
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-400 block mb-1">Pipeline Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. OpenAI SDK Releases"
+                          value={newPipeName}
+                          onChange={(e) => setNewPipeName(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-400 block mb-1">Target URL to Crawl *</label>
+                        <input
+                          type="url"
+                          required
+                          placeholder="https://..."
+                          value={newPipeUrl}
+                          onChange={(e) => setNewPipeUrl(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[11px] font-semibold text-slate-400 block mb-1">Category</label>
+                          <select
+                            value={newPipeDomain}
+                            onChange={(e) => setNewPipeDomain(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                          >
+                            <option value="developer">Developer SDK</option>
+                            <option value="pricing">B2B Pricing</option>
+                            <option value="regulatory">Regulatory/Gov</option>
+                            <option value="custom">Custom URL</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-semibold text-slate-400 block mb-1">Frequency</label>
+                          <select
+                            value={newPipeFreq}
+                            onChange={(e) => setNewPipeFreq(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                          >
+                            <option value="6">Every 6h</option>
+                            <option value="12">Every 12h</option>
+                            <option value="24">Every 24h</option>
+                            <option value="48">Every 48h</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-[11px] text-slate-400">Worker AI will automatically calculate semantic delta diffs on every cycle.</span>
+                      <button
+                        type="submit"
+                        disabled={creatingPipeline}
+                        className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {creatingPipeline ? "Creating Pipeline..." : "+ Create Recurring Pipeline"}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Pipelines List */}
+                  <div className="grid gap-3">
+                    {pipelines.map((pipe) => (
+                      <div key={pipe.id} className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-white">{pipe.name}</span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              pipe.status === "ACTIVE"
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                : "bg-slate-800 text-slate-400 border border-slate-700"
+                            }`}>
+                              {pipe.status}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                              Every {pipe.frequency_hours}h
+                            </span>
+                          </div>
+                          <a href={pipe.target_url} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline truncate max-w-lg block flex items-center gap-1 font-mono">
+                            {pipe.target_url} <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end md:self-auto">
+                          <button
+                            onClick={() => handleTogglePipeline(pipe.id)}
+                            className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                              pipe.status === "ACTIVE"
+                                ? "bg-slate-800 hover:bg-slate-700 text-amber-300"
+                                : "bg-emerald-900/50 hover:bg-emerald-800/50 text-emerald-300"
+                            }`}
+                            title={pipe.status === "ACTIVE" ? "Pause Pipeline" : "Resume Pipeline"}
+                          >
+                            {pipe.status === "ACTIVE" ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                            <span>{pipe.status === "ACTIVE" ? "Pause" : "Resume"}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleDeletePipeline(pipe.id)}
+                            className="p-2 rounded-lg bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
+                            title="Delete Pipeline"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SECTION 3: WEBHOOKS & REAL-TIME ALERTS */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-purple-400" />
+                      Discord / Slack Webhooks & Alert Subscriptions
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Receive instant JSON webhook notifications whenever a CRITICAL breaking change or price hike is detected.
+                    </p>
+                  </div>
+
+                  <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 space-y-4">
+                    <form onSubmit={handleRegisterWebhook} className="space-y-3">
+                      <label className="text-[11px] font-semibold text-slate-400 block">Outbound Webhook URL (Discord, Slack, or Custom Server)</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="url"
+                          required
+                          placeholder="https://discord.com/api/webhooks/... or https://hooks.slack.com/..."
+                          value={newWebhookUrl}
+                          onChange={(e) => setNewWebhookUrl(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 font-mono"
+                        />
+                        <button
+                          type="submit"
+                          disabled={registeringWebhook}
+                          className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-lg shadow-purple-500/20 transition-colors flex-shrink-0 cursor-pointer disabled:opacity-50"
+                        >
+                          {registeringWebhook ? "Adding..." : "+ Add Webhook"}
+                        </button>
+                      </div>
+                    </form>
+
+                    {webhookTestStatus && (
+                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200">
+                        {webhookTestStatus}
+                      </div>
+                    )}
+
+                    {/* Webhooks list */}
+                    {webhooks.length > 0 && (
+                      <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Webhook Destinations</div>
+                        <div className="grid gap-2">
+                          {webhooks.map((wh) => (
+                            <div key={wh.id} className="bg-slate-950 rounded-xl p-3 flex items-center justify-between gap-3 border border-slate-800">
+                              <div className="flex items-center gap-2 truncate">
+                                <Radio className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                                <span className="text-xs font-mono text-slate-300 truncate">{wh.webhook_url}</span>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <button
+                                  onClick={() => handleTestWebhook(wh.webhook_url)}
+                                  disabled={testingWebhook}
+                                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 text-xs font-semibold transition-colors cursor-pointer"
+                                >
+                                  Test Webhook
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteWebhook(wh.id)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 

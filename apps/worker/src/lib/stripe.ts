@@ -1,7 +1,7 @@
-import { Env } from "../types";
-
 export interface CreateCheckoutParams {
-  priceId: string;
+  priceId?: string;
+  unitAmountCents?: number;
+  productName?: string;
   successUrl: string;
   cancelUrl: string;
   customerEmail?: string;
@@ -18,7 +18,16 @@ export async function createStripeCheckoutSession(
   const body = new URLSearchParams();
   body.append("payment_method_types[]", "card");
   body.append("mode", "subscription");
-  body.append("line_items[0][price]", params.priceId);
+
+  if (params.unitAmountCents && params.unitAmountCents > 0) {
+    body.append("line_items[0][price_data][currency]", "usd");
+    body.append("line_items[0][price_data][product_data][name]", params.productName || "Universal Data Refinery Pro");
+    body.append("line_items[0][price_data][unit_amount]", Math.round(params.unitAmountCents).toString());
+    body.append("line_items[0][price_data][recurring][interval]", "month");
+  } else {
+    body.append("line_items[0][price]", params.priceId || "price_1U7p5j2aItc9d3fFvEDeTvyd");
+  }
+
   body.append("line_items[0][quantity]", "1");
   body.append("success_url", params.successUrl);
   body.append("cancel_url", params.cancelUrl);

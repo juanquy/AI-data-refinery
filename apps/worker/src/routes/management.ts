@@ -250,3 +250,142 @@ managementRouter.delete("/webhooks/:id", async (c) => {
     return c.json({ error: "Failed to delete webhook", details: err.message }, 500);
   }
 });
+
+// 6. Dynamic Pricing Configuration (Founder-Controlled)
+managementRouter.get("/pricing-plans", async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare("SELECT * FROM pricing_plans ORDER BY price_usd ASC").all();
+    return c.json({ status: "success", plans: results || [] });
+  } catch (err: any) {
+    return c.json({ error: "Failed to fetch pricing plans", details: err.message }, 500);
+  }
+});
+
+managementRouter.post("/pricing-plans", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const { id, price_usd, included_queries, stripe_price_id, description } = body;
+
+  if (!id || price_usd === undefined) {
+    return c.json({ error: "Missing plan id or price_usd" }, 400);
+  }
+
+  try {
+    await c.env.DB.prepare(`
+      UPDATE pricing_plans 
+      SET price_usd = ?, included_queries = COALESCE(?, included_queries), stripe_price_id = COALESCE(?, stripe_price_id), description = COALESCE(?, description), updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(Number(price_usd), included_queries !== undefined ? Number(included_queries) : null, stripe_price_id || null, description || null, id).run();
+
+    const updatedPlan = await c.env.DB.prepare("SELECT * FROM pricing_plans WHERE id = ?").bind(id).first();
+    return c.json({ status: "success", message: `Pricing plan ${id} updated successfully`, plan: updatedPlan });
+  } catch (err: any) {
+    return c.json({ error: "Failed to update pricing plan", details: err.message }, 500);
+  }
+});
+
+// 7. Human Accounts & Subscribers Management
+managementRouter.get("/human-users", async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare(`
+      SELECT id, key_value, user_email, plan, monthly_quota, current_usage, status, stripe_customer_id, stripe_subscription_id, created_at, expires_at
+      FROM api_keys
+      WHERE plan != 'AGENT_MICRO' AND key_value NOT LIKE 'ref_agent_%'
+      ORDER BY created_at DESC
+    `).all();
+
+    return c.json({ status: "success", users: results || [] });
+  } catch (err: any) {
+    return c.json({ error: "Failed to fetch human users", details: err.message }, 500);
+  }
+});
+
+managementRouter.post("/human-users/:id/quota", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json().catch(() => ({}));
+  const monthlyQuota = Number(body.monthlyQuota);
+  const plan = body.plan;
+
+  if (isNaN(monthlyQuota) && !plan) {
+    return c.json({ error: "Provide monthlyQuota or plan" }, 400);
+  }
+
+  try {
+    if (plan && !isNaN(monthlyQuota)) {
+      await c.env.DB.prepare("UPDATE api_keys SET monthly_quota = ?, plan = ? WHERE id = ?").bind(monthlyQuota, plan, id).run();
+    } else if (!isNaN(monthlyQuota)) {
+      await c.env.DB.prepare("UPDATE api_keys SET monthly_quota = ? WHERE id = ?").bind(monthlyQuota, id).run();
+    } else if (plan) {
+      await c.env.DB.prepare("UPDATE api_keys SET plan = ? WHERE id = ?").bind(plan, id).run();
+    }
+
+    const updated = await c.env.DB.prepare("SELECT * FROM api_keys WHERE id = ?").bind(id).first();
+    return c.json({ status: "success", message: "Account updated successfully", user: updated });
+  } catch (err: any) {
+    return c.json({ error: "Failed to update user quota", details: err.message }, 500);
+  }
+});
+
+managementRouter.post("/human-users/:id/toggle", async (c) => {
+  const id = c.req.param("id");
+  try {
+    const user: any = await c.env.DB.prepare("SELECT status FROM api_keys WHERE id = ?").bind(id).first();
+    if (!user) return c.json({ error: "User key not found" }, 404);
+
+    const nextStatus = user.status === "ACTIVE" ? "REVOKED" : "ACTIVE";
+    await c.env.DB.prepare("UPDATE api_keys SET status = ? WHERE id = ?").bind(nextStatus, id).run();
+    return c.json({ status: "success", id, userStatus: nextStatus });
+  } catch (err: any) {
+    return c.json({ error: "Failed to toggle user status", details: err.message }, 500);
+  }
+});
+
+// 8. Autonomous AI Agent Fleets & Wallets Management
+managementRouter.get("/agent-fleets", async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare(`
+      SELECT id, key_value, user_email as agent_identity, plan, monthly_quota as allowance, current_usage, status, created_at
+      FROM api_keys
+      WHERE plan = 'AGENT_MICRO' OR key_value LIKE 'ref_agent_%'
+      ORDER BY created_at DESC
+    `).all();
+
+    return c.json({ status: "success", agents: results || [] });
+  } catch (err: any) {
+    return c.json({ error: "Failed to fetch agent fleets", details: err.message }, 500);
+  }
+});
+
+managementRouter.post("/agent-fleets/:id/topup", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json().catch(() => ({}));
+  const addCredits = Number(body.addCredits || 500);
+
+  try {
+    await c.env.DB.prepare("UPDATE api_keys SET monthly_quota = monthly_quota + ?, status = 'ACTIVE' WHERE id = ?").bind(addCredits, id).run();
+    const updated = await c.env.DB.prepare("SELECT * FROM api_keys WHERE id = ?").bind(id).first();
+    return c.json({ status: "success", message: `Added ${addCredits} credits to agent wallet`, agent: updated });
+  } catch (err: any) {
+    return c.json({ error: "Failed to top up agent wallet", details: err.message }, 500);
+  }
+});
+
+managementRouter.post("/agent-fleets/:id/kill", async (c) => {
+  const id = c.req.param("id");
+  try {
+    await c.env.DB.prepare("UPDATE api_keys SET status = 'REVOKED' WHERE id = ?").bind(id).run();
+    return c.json({ status: "success", message: `Agent token ${id} has been terminated (Emergency Kill-Switch activated)` });
+  } catch (err: any) {
+    return c.json({ error: "Failed to kill agent token", details: err.message }, 500);
+  }
+});
+
+// 9. Live Agent Execution & Audit Telemetry Logs
+managementRouter.get("/agent-audit-logs", async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare("SELECT * FROM agent_audit_logs ORDER BY created_at DESC LIMIT 50").all();
+    return c.json({ status: "success", logs: results || [] });
+  } catch (err: any) {
+    return c.json({ error: "Failed to fetch agent audit logs", details: err.message }, 500);
+  }
+});
+
