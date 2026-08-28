@@ -921,29 +921,6 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     setTimeout(() => setCopiedKey(false), 2000);
   };
 
-  // Marketing campaign state
-  const [campaignData, setCampaignData] = useState<any>(null);
-  const [campaignLoading, setCampaignLoading] = useState(false);
-  const [copiedMarketingKey, setCopiedMarketingKey] = useState<string | null>(null);
-
-  const handleGenerateCampaign = async () => {
-    setCampaignLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/promotions/drafts`);
-      const data = await res.json();
-      setCampaignData(data.campaign);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setCampaignLoading(false);
-    }
-  };
-
-  const copyMarketingText = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedMarketingKey(id);
-    setTimeout(() => setCopiedMarketingKey(null), 2000);
-  };
 
   // Full-Service Management State
   const [analyticsData, setAnalyticsData] = useState<any>(null);
