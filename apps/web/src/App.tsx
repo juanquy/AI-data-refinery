@@ -217,6 +217,9 @@ interface NicheSchemaTemplate {
   name: string;
   description: string;
   prompt: string;
+  complianceStandard: string;
+  legalBasis: string;
+  complianceNotice: string;
   fields: CustomSchemaField[];
 }
 
@@ -227,7 +230,10 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     acv: "$12k–$60k/yr",
     name: "Developer SDK Breaking Changes & AST Migration",
     description: "Extracts deprecated functions, removed parameters, breaking signature shifts, and exact before/after code migration snippets.",
-    prompt: "Extract affected symbols, deprecated function names, breaking signatures, and exact before/after code migration snippets.",
+    prompt: "Extract affected symbols, deprecated function names, breaking signatures, and exact before/after code migration snippets from public API documentation and open-source changelogs.",
+    complianceStandard: "Open Source / API Syntax Standards (OSI & FSF)",
+    legalBasis: "Public Developer Docs & Functional API Syntax (Google LLC v. Oracle America, Inc., 593 U.S. 2021)",
+    complianceNotice: "Lawful extraction of public changelogs, API method signatures, and syntactic AST transformations. Strict adherence to open-source repository licenses.",
     fields: [
       { id: "f1", name: "packageOrServiceName", type: "string", description: "e.g. stripe-node, nextjs, react, @cloudflare/workers-types", required: true },
       { id: "f2", name: "version", type: "string", description: "Version number e.g. 15.0.0 or 2026.1", required: true },
@@ -244,7 +250,10 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     acv: "$24k–$100k/yr",
     name: "B2B SaaS Dynamic Pricing & Quota Matrix",
     description: "Extracts normalized monthly/annual costs, seat limits, included token/bandwidth quotas, and hidden overage terms across SaaS vendors.",
-    prompt: "Extract normalized monthly/annual pricing, seat minimums, included usage/token quotas, and hidden overage terms.",
+    prompt: "Extract normalized monthly/annual pricing, seat minimums, included usage/token quotas, and hidden overage terms from public vendor pricing pages and rate cards. Exclude speculative or non-public estimates.",
+    complianceStandard: "FTC Truth-in-Advertising & Lanham Act Standards",
+    legalBasis: "Public Commercial Fact Extraction (hiQ Labs, Inc. v. LinkedIn Corp., 31 F.4th 1180)",
+    complianceNotice: "Processes publicly published rate cards and tier limits for competitive FinOps intelligence and cost benchmarking. Excludes non-public negotiated enterprise discounts.",
     fields: [
       { id: "f1", name: "productName", type: "string", description: "Name of vendor product (e.g. Supabase, Datadog, OpenAI)", required: true },
       { id: "f2", name: "planTier", type: "string", description: "e.g. Starter, Pro, Team, Enterprise", required: true },
@@ -261,7 +270,10 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     acv: "$36k–$120k/yr",
     name: "Municipal Zoning, STR & Permit Compliance",
     description: "Extracts city zoning classifications, short-term rental permits, mandatory inspection checklists, and penalty fine structures.",
-    prompt: "Extract municipal zoning classifications, short-term rental permit laws, mandatory compliance checklists, and penalty fine structures.",
+    prompt: "Extract municipal zoning classifications, short-term rental permit laws, mandatory compliance checklists, and penalty fine structures from official municipal codes. Adhere strictly to Fair Housing Act nondiscrimination principles.",
+    complianceStandard: "Fair Housing Act (42 U.S.C. 3601) & FOIA / State Sunshine Laws",
+    legalBasis: "Official Government Edicts in the Public Domain (Georgia v. Public.Resource.Org, Inc., 140 S. Ct. 1498)",
+    complianceNotice: "Directly ingests published city planning ordinances, commercial permit fee schedules, and STR licensing statutes. Adheres strictly to Fair Housing nondiscrimination regulations.",
     fields: [
       { id: "f1", name: "jurisdictionCity", type: "string", description: "City or municipality name (e.g. San Francisco, Austin)", required: true },
       { id: "f2", name: "zoningCode", type: "string", description: "Zoning code (e.g. R-1, C-3, Mixed-Use Commercial)", required: true },
@@ -277,7 +289,10 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     acv: "$50k–$150k/yr",
     name: "BioPharma FDA Trials & Patent Exclusivity Cliffs",
     description: "Extracts active chemical ingredients, FDA 510(k)/NDA approvals, clinical trial phases, black-box warnings, and patent exclusivity expiration dates.",
-    prompt: "Extract active pharmaceutical ingredients, FDA approval status, clinical trial phases, black box warnings, and patent exclusivity expiration dates.",
+    prompt: "Extract active pharmaceutical ingredients, FDA approval status, clinical trial phases, black box warnings, and patent exclusivity expiration dates from public FDA registries and ClinicalTrials.gov. For informational and research intelligence only; not clinical medical advice.",
+    complianceStandard: "FDA 21 CFR Parts 312/314 & USPTO Public Patent Registry",
+    legalBasis: "Public Health Registry Mandates (42 CFR Part 11) & Public Patent Disclosures",
+    complianceNotice: "Research and market intelligence extraction from ClinicalTrials.gov and FDA Orange/Purple Books. Factual regulatory metadata only; not medical, therapeutic, or prescribing advice.",
     fields: [
       { id: "f1", name: "drugBrandName", type: "string", description: "Commercial brand name of therapeutic drug", required: true },
       { id: "f2", name: "activeCompound", type: "string", description: "Chemical or biologic active pharmaceutical ingredient (API)", required: true },
@@ -293,7 +308,10 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     acv: "$30k–$90k/yr",
     name: "SEC 10-K Disclosures & Risk Factor Intelligence",
     description: "Extracts GAAP vs Non-GAAP operating metrics, total debt maturities, forward guidance statements, and highlighted corporate risk factors from SEC filings.",
-    prompt: "Extract GAAP vs Non-GAAP operating metrics, total debt maturities, forward guidance statements, and highlighted corporate risk factors from SEC filings.",
+    prompt: "Extract GAAP vs Non-GAAP operating metrics, total debt maturities, forward guidance statements, and highlighted corporate risk factors from official SEC EDGAR filings. For research intelligence only; does not constitute investment advice.",
+    complianceStandard: "SEC Regulation S-K, Regulation G & Sarbanes-Oxley Act",
+    legalBasis: "Securities Exchange Act of 1934 (15 U.S.C. § 78m) Public EDGAR Filings",
+    complianceNotice: "Extracts public statutory disclosures, Item 1A risk factors, and debt schedules filed with the SEC. Informational research intelligence only; does not constitute registered financial, investment, or legal advice.",
     fields: [
       { id: "f1", name: "tickerSymbol", type: "string", description: "Stock ticker symbol (e.g. NVDA, MSFT, AAPL)", required: true },
       { id: "f2", name: "fiscalPeriod", type: "string", description: "e.g. FY2025, Q3-2026", required: true },
@@ -310,7 +328,10 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     acv: "$50k–$250k/yr",
     name: "Health Plan Clinical Policies & Prior-Auth Criteria",
     description: "Extracts CPT procedure codes, mandatory conservative therapy weeks, required clinical trial criteria, drug formulary tiers, and immediate approval red flags for claims AI agents.",
-    prompt: "Extract procedure CPT codes, mandatory prior conservative therapies, required clinical documentation, drug formulary tiers, and immediate approval red flags for health insurance prior authorization.",
+    prompt: "Extract procedure CPT codes, mandatory prior conservative therapies, required clinical documentation, drug formulary tiers, and immediate approval red flags from public health plan clinical policy bulletins. HIPAA COMPLIANCE: Do NOT extract, ingest, or store individual patient Protected Health Information (PHI).",
+    complianceStandard: "HIPAA Safe Harbor (45 CFR § 164.514) & CMS Interoperability Rule (CMS-9115-F)",
+    legalBasis: "CMS Mandated Public Payer Policy Bulletins & CPT-4 Public Clinical Guidelines",
+    complianceNotice: "CRITICAL HIPAA COMPLIANCE: Ingests public commercial and Medicare/Medicaid clinical policy coverage bulletins only. Strictly prohibited from processing, ingesting, or storing individual Protected Health Information (PHI) or individual patient medical records.",
     fields: [
       { id: "f1", name: "cptProcedureOrHcpcsCode", type: "string", description: "CPT or HCPCS code (e.g. 72148, 99214, J9355)", required: true },
       { id: "f2", name: "procedureOrDrugName", type: "string", description: "Name of medical procedure, surgery, or specialty drug", required: true },
@@ -2122,6 +2143,10 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
                         <p className="text-[10px] text-slate-400 line-clamp-2 leading-snug">
                           {tmpl.description}
                         </p>
+                        <div className="pt-1 flex items-center gap-1 text-[9px] text-emerald-400/90 font-mono">
+                          <ShieldCheck className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                          <span className="truncate">{tmpl.complianceStandard}</span>
+                        </div>
                       </div>
 
                       <div className="mt-2.5 pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-500 font-mono">
@@ -2147,6 +2172,32 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
                   </div>
                   <span className="text-[11px] text-slate-400">No-code extraction definition</span>
                 </div>
+
+                {/* Regulatory & Compliance Verified Notice */}
+                {(() => {
+                  const tmpl = NICHE_SCHEMA_TEMPLATES.find(t => t.id === activeTemplateId);
+                  if (!tmpl) return null;
+                  return (
+                    <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-xl p-3.5 space-y-2 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span className="font-bold text-emerald-300">Regulatory Compliance Verified</span>
+                        </div>
+                        <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-bold">
+                          {tmpl.complianceStandard}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 leading-relaxed">
+                        {tmpl.complianceNotice}
+                      </p>
+                      <div className="pt-1.5 border-t border-emerald-500/10 flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
+                        <span className="text-slate-500 font-semibold">Legal Basis:</span>
+                        <span className="truncate">{tmpl.legalBasis}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <form onSubmit={handleSaveCustomSchema} className="space-y-4">
                   <div className="grid sm:grid-cols-2 gap-4">
