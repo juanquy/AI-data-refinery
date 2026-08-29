@@ -1,0 +1,523 @@
+<title>Refinery Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #F1F4F5;
+    --panel: #FAFCFC;
+    --panel-2: #E9EEF0;
+    --ink: #1B3A52;
+    --ink-soft: #4A6478;
+    --line: #A9BAC5;
+    --line-faint: #CBD7DE;
+    --accent: #C95A1B;
+    --accent-ink: #FFFFFF;
+    --good: #2E7D53;
+    --warn: #A87718;
+    --crit: #B44A3F;
+    --grid: rgba(27, 58, 82, 0.055);
+    --shadow: 0 1px 2px rgba(27, 58, 82, 0.08), 0 4px 16px rgba(27, 58, 82, 0.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #10263A;
+      --panel: #16324A;
+      --panel-2: #1C3D59;
+      --ink: #E6EDF2;
+      --ink-soft: #9DB2C2;
+      --line: #4E6A80;
+      --line-faint: #2C4A63;
+      --accent: #F07B33;
+      --accent-ink: #10263A;
+      --good: #63B287;
+      --warn: #D9A23F;
+      --crit: #DA7265;
+      --grid: rgba(230, 237, 242, 0.05);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #10263A;
+    --panel: #16324A;
+    --panel-2: #1C3D59;
+    --ink: #E6EDF2;
+    --ink-soft: #9DB2C2;
+    --line: #4E6A80;
+    --line-faint: #2C4A63;
+    --accent: #F07B33;
+    --accent-ink: #10263A;
+    --good: #63B287;
+    --warn: #D9A23F;
+    --crit: #DA7265;
+    --grid: rgba(230, 237, 242, 0.05);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.25);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; animation: none !important; }
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 16.5px;
+    line-height: 1.65;
+    margin: 0;
+  }
+  .display { font-family: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+
+  .frame { display: grid; grid-template-columns: 240px minmax(0, 1fr); max-width: 1180px; margin: 0 auto; }
+  nav.rail {
+    position: sticky; top: 0; align-self: start;
+    height: 100vh; padding: 40px 20px 40px 28px;
+    border-right: 1px solid var(--line-faint);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .rail-brand { font-family: "Big Shoulders Display", "Arial Narrow", sans-serif; font-weight: 800; font-size: 20px; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 4px; }
+  .rail-sub { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10.5px; color: var(--ink-soft); letter-spacing: 0.08em; margin: 0 0 26px; }
+  nav.rail a {
+    display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: baseline;
+    padding: 7px 8px; border-radius: 3px;
+    color: var(--ink-soft); text-decoration: none; font-size: 13px; line-height: 1.3;
+    border-left: 2px solid transparent;
+  }
+  nav.rail a .n { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.05em; }
+  nav.rail a:hover { color: var(--ink); background: var(--panel-2); }
+  nav.rail a.live { color: var(--ink); border-left-color: var(--accent); background: var(--panel-2); }
+  nav.rail a:focus-visible, .adcard summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .rail-hint { margin-top: auto; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px; color: var(--ink-soft); letter-spacing: 0.05em; }
+
+  main { padding: 0 48px 120px; min-width: 0; }
+  section { padding-top: 84px; }
+  section + section { margin-top: 56px; border-top: 1px solid var(--line-faint); }
+
+  .eyebrow {
+    display: flex; align-items: center; gap: 10px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent);
+    margin: 0 0 14px;
+  }
+  .eyebrow::after { content: ""; height: 1px; flex: 0 0 56px; background: var(--accent); opacity: 0.6; }
+  h1, h2 { font-family: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif; text-transform: uppercase; letter-spacing: 0.015em; text-wrap: balance; margin: 0 0 18px; }
+  h1 { font-size: clamp(52px, 8vw, 96px); font-weight: 800; line-height: 0.95; }
+  h2 { font-size: clamp(32px, 4.4vw, 46px); font-weight: 700; line-height: 1.02; }
+  h3 { font-size: 17px; font-weight: 600; margin: 30px 0 8px; }
+  p, li { max-width: 68ch; }
+  p.lede { font-size: 19px; line-height: 1.6; color: var(--ink); max-width: 62ch; }
+  p.mute, .mute { color: var(--ink-soft); }
+  a { color: var(--accent); }
+  strong { font-weight: 600; }
+  code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.86em; background: var(--panel-2); border-radius: 3px; padding: 1px 5px; }
+
+  .stamp {
+    display: inline-flex; gap: 14px; align-items: center;
+    border: 1.5px solid var(--accent); color: var(--accent);
+    font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 8px 14px; border-radius: 2px; margin: 24px 0 0;
+    transform: rotate(-1.2deg);
+  }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 26px; margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--line-faint); }
+  .meta-row div { font-size: 13px; }
+  .meta-row .k { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); display: block; margin-bottom: 2px; }
+
+  .cardgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 26px 0; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line-faint); border-radius: 4px;
+    padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .card .tag { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; display: inline-block; margin-bottom: 8px; padding: 2px 7px; border-radius: 2px; }
+  .tag.crit { color: var(--crit); border: 1px solid var(--crit); }
+  .tag.good { color: var(--good); border: 1px solid var(--good); }
+  .tag.warn { color: var(--warn); border: 1px solid var(--warn); }
+  .card h4 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
+  .card p { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+  .card ul { margin: 0; padding-left: 18px; font-size: 13.5px; color: var(--ink-soft); }
+  .card ul li { margin: 6px 0; max-width: none; }
+  .cs { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 9px; color: var(--accent); border: 1px solid var(--accent); border-radius: 2px; padding: 1px 5px; letter-spacing: 0.09em; text-transform: uppercase; white-space: nowrap; vertical-align: 2px; margin-left: 6px; }
+
+  figure.draft {
+    margin: 30px 0; padding: 26px 26px 18px;
+    background:
+      repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 24px),
+      repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 24px),
+      var(--panel);
+    border: 1px solid var(--line-faint); border-radius: 4px; box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  figure.draft svg { display: block; max-width: 100%; height: auto; margin: 0 auto; color: var(--ink); }
+  figcaption { font-size: 12.5px; color: var(--ink-soft); margin-top: 12px; font-family: "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.02em; }
+  figcaption b { color: var(--accent); font-weight: 600; }
+
+  table { border-collapse: collapse; width: 100%; margin: 24px 0; font-size: 14px; }
+  th { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); text-align: left; padding: 8px 14px 8px 0; border-bottom: 1.5px solid var(--line); }
+  td { padding: 10px 14px 10px 0; border-bottom: 1px solid var(--line-faint); vertical-align: top; }
+  td:first-child { white-space: nowrap; }
+  .tablewrap { overflow-x: auto; }
+
+  .adgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin: 26px 0; }
+  details.adcard { background: var(--panel); border: 1px solid var(--line-faint); border-radius: 4px; box-shadow: var(--shadow); }
+  details.adcard summary {
+    list-style: none; cursor: pointer; padding: 14px 16px;
+    display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; align-items: baseline;
+  }
+  details.adcard summary::-webkit-details-marker { display: none; }
+  details.adcard summary .id { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px; font-weight: 600; color: var(--accent); }
+  details.adcard summary .t { font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+  details.adcard summary .chev { color: var(--ink-soft); font-size: 11px; transition: transform 0.15s ease; }
+  details.adcard[open] summary .chev { transform: rotate(90deg); }
+  details.adcard .body { padding: 0 16px 16px 80px; font-size: 13px; color: var(--ink-soft); }
+  details.adcard .body p { margin: 0 0 8px; }
+  details.adcard .body .k { color: var(--ink); font-weight: 600; }
+
+  ul.trigger { list-style: none; padding: 0; margin: 20px 0; }
+  ul.trigger li { padding: 10px 0 10px 0; border-bottom: 1px solid var(--line-faint); display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: 16px; max-width: none; font-size: 14px; }
+  ul.trigger li .what { font-weight: 600; }
+  ul.trigger li .when { color: var(--ink-soft); }
+
+  ol.discuss { counter-reset: q; list-style: none; padding: 0; margin: 24px 0; }
+  ol.discuss li { counter-increment: q; padding: 16px 18px; margin: 10px 0; background: var(--panel); border: 1px solid var(--line-faint); border-left: 3px solid var(--accent); border-radius: 3px; max-width: none; }
+  ol.discuss li::before { content: "Q" counter(q); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.1em; display: block; margin-bottom: 4px; }
+
+  .foot { margin-top: 80px; padding-top: 20px; border-top: 1px solid var(--line-faint); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; color: var(--ink-soft); letter-spacing: 0.04em; }
+
+  @media (max-width: 980px) {
+    .frame { grid-template-columns: 1fr; }
+    nav.rail { position: static; height: auto; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--line-faint); padding: 20px 24px; gap: 4px 10px; }
+    .rail-brand, .rail-sub { width: 100%; margin-bottom: 2px; }
+    .rail-hint { display: none; }
+    nav.rail a { grid-template-columns: auto; padding: 4px 8px; border-left: none; border-bottom: 2px solid transparent; }
+    nav.rail a .n { display: none; }
+    nav.rail a.live { border-bottom-color: var(--accent); }
+    main { padding: 0 24px 80px; }
+    section { padding-top: 48px; }
+    details.adcard .body { padding-left: 16px; }
+    ul.trigger li { grid-template-columns: 1fr; gap: 2px; }
+  }
+</style>
+
+<div class="frame">
+<nav class="rail" aria-label="Sections">
+  <p class="rail-brand">Refinery<br>Blueprint</p>
+  <p class="rail-sub">ARCH SPINE / 2026-08-29</p>
+  <a href="#s0"><span class="n">00</span><span>Cover</span></a>
+  <a href="#s1"><span class="n">01</span><span>Where we stand</span></a>
+  <a href="#s2"><span class="n">02</span><span>The anchor decision</span></a>
+  <a href="#s3"><span class="n">03</span><span>The shape</span></a>
+  <a href="#s4"><span class="n">04</span><span>The pipeline</span></a>
+  <a href="#s5"><span class="n">05</span><span>Who owns what</span></a>
+  <a href="#s6"><span class="n">06</span><span>Money</span></a>
+  <a href="#s7"><span class="n">07</span><span>Security posture</span></a>
+  <a href="#s8"><span class="n">08</span><span>The sixteen rules</span></a>
+  <a href="#s9"><span class="n">09</span><span>Your four calls</span></a>
+  <span class="rail-hint">←/→ or J/K to move</span>
+</nav>
+
+<main>
+
+<section id="s0" aria-label="Cover">
+  <p class="eyebrow">Universal Data Refinery · architecture walkthrough</p>
+  <h1 class="display">Refinery<br>Blueprint</h1>
+  <p class="lede">This is the technical contract for the platform we're about to build: what we decided, what each decision trades away, and the four calls that deserve your countersignature. Twenty minutes, front to back.</p>
+  <p>The short version: rebuild on Cloudflare — one worker, one pipeline, one ledger, sixteen enforced rules. The four calls that are yours to countersign: <a href="#q1">the Cloudflare bet</a>, <a href="#q2">private-by-default refinements</a>, <a href="#q3">settle-after-delivery agent payments</a>, and <a href="#q4">accrual-first marketplace payouts</a>.</p>
+  <div class="stamp">Reviewed · four-lens gate passed · awaiting co-founder read</div>
+  <div class="meta-row">
+    <div><span class="k">Derived from</span>Launch PRD (FR-001..101) + full code sweep</div>
+    <div><span class="k">Governs</span>Everything built from here on</div>
+    <div><span class="k">Full contract</span><span class="mono">ARCHITECTURE-SPINE.md</span> in the repo</div>
+    <div><span class="k">Date</span>Aug 29, 2026</div>
+  </div>
+</section>
+
+<section id="s1" aria-label="Where we stand">
+  <p class="eyebrow">01 · Condition report</p>
+  <h2 class="display">Where we stand</h2>
+  <p class="lede">We audited every line of the prototype. The honest verdict: it proves the product runs on Cloudflare; almost nothing else survives contact with real customers.</p>
+  <p>That's not a criticism of the idea — it's what an AI-generated prototype is for. But it means the architecture work wasn't "harden what exists." It was "decide how the real thing is built." Here is what the audit confirmed, with the code as evidence:</p>
+  <div class="cardgrid">
+    <div class="card"><span class="tag crit">Confirmed</span><h4>No engine behind the scheduler</h4><p>The cron job selects pipelines, logs a count, and throws them away. Refinement only ever runs inside a live HTTP request. There is no queue, no background execution of any kind.</p></div>
+    <div class="card"><span class="tag crit">Confirmed</span><h4>Auth is unsalvageable</h4><p>Founder passcodes hardcoded in source, in the database, and in the frontend — and any paying customer's API key is accepted as a platform admin credential.</p></div>
+    <div class="card"><span class="tag crit">Confirmed</span><h4>Tenant isolation doesn't exist</h4><p>Core data tables have no tenant column at all. Anyone can list every workspace and join any of them, unauthenticated.</p></div>
+    <div class="card"><span class="tag warn">Gap</span><h4>Two launch commitments, zero code</h4><p>Agent payments (x402) exist only as a roadmap bullet. The MCP server is hand-rolled on an obsolete 2024 protocol with no auth and no metering.</p></div>
+    <div class="card"><span class="tag warn">Gap</span><h4>Nothing is verified</h4><p>Seven unit tests, no CI, no staging environment, and dashboard numbers ("99.998% uptime") that are hardcoded string literals.</p></div>
+  </div>
+  <p class="mute">Full evidence with file-and-line citations lives in <span class="mono">code-sweep.md</span> alongside the spine.</p>
+</section>
+
+<section id="s2" aria-label="The anchor decision">
+  <p class="eyebrow">02 · Platform</p>
+  <h2 class="display">The anchor decision: Cloudflare, ratified</h2>
+  <p class="lede">You chose Cloudflare; the audit says the choice holds. Since the internals need rebuilding on <em>any</em> platform, the only question that mattered was whether Cloudflare fits this product — and it does, inside three fences.</p>
+  <div class="cardgrid">
+    <div class="card"><span class="tag good">What we gain</span>
+      <ul>
+        <li>Near-zero ops for a two-person team — no servers, no Kubernetes, no 3 a.m. pager</li>
+        <li>Everything the product needs is a native primitive: SQL, object storage, queues, durable workflows, vector search, edge inference</li>
+        <li>The 402/agent-payments story is edge-native — Cloudflare co-founded the x402 standard we're building on</li>
+      </ul>
+    </div>
+    <div class="card"><span class="tag warn">What we fence</span>
+      <ul>
+        <li>Workers CPU ceilings: the pipeline is designed around them (verified: up to 5 min per invocation, paid plan)</li>
+        <li>D1's 10 GB per-database cap: a tripwire fires at 5 GB, with shard/archive options already named</li>
+        <li>Model quality: extraction may outgrow Workers AI, so external models are allowed — but only through Cloudflare's AI Gateway, keeping cost tracking on-platform</li>
+      </ul>
+    </div>
+  </div>
+  <p>Every escape hatch is written into the contract as a tripwire, not a vibe: splitting into multiple services requires a <em>measured</em> platform limit, documented, before anyone gets to do it.</p>
+</section>
+
+<section id="s3" aria-label="The shape">
+  <p class="eyebrow">03 · Paradigm</p>
+  <h2 class="display">The shape: one deployable, three layers</h2>
+  <p class="lede">A hexagonal modular monolith: one worker to deploy and reason about, with hard internal walls a reviewer — or a linter — can enforce mechanically.</p>
+  <figure class="draft">
+    <svg viewBox="0 0 760 300" role="img" aria-label="Layer diagram: entry layer and adapters both point into the core; Studio and SDKs reach entry only through the public HTTP contract; core and adapters draw types from packages/schema.">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+        <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+      </defs>
+      <rect x="20" y="20" width="720" height="200" rx="4" fill="none" stroke="currentColor" stroke-dasharray="5 4" opacity="0.45"/>
+      <text x="34" y="42" font-size="11" font-family="IBM Plex Mono, monospace" fill="currentColor" opacity="0.65">apps/worker — the single deployable</text>
+      <rect x="50" y="70" width="180" height="110" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <text x="140" y="98" font-size="13" font-weight="600" text-anchor="middle" fill="currentColor">entry/</text>
+      <text x="140" y="118" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.7">HTTP · MCP · queues</text>
+      <text x="140" y="134" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.7">workflows · cron</text>
+      <text x="140" y="162" font-size="10.5" text-anchor="middle" fill="currentColor" opacity="0.55">no business logic, no SQL</text>
+      <rect x="290" y="70" width="180" height="110" rx="3" fill="none" stroke="var(--accent)" stroke-width="2"/>
+      <text x="380" y="98" font-size="13" font-weight="600" text-anchor="middle" fill="var(--accent)">core/</text>
+      <text x="380" y="118" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.7">refinement · corpus · tenancy</text>
+      <text x="380" y="134" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.7">identity · metering · marketplace</text>
+      <text x="380" y="162" font-size="10.5" text-anchor="middle" fill="currentColor" opacity="0.55">pure TS — every rule lives here</text>
+      <rect x="530" y="70" width="180" height="110" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <text x="620" y="98" font-size="13" font-weight="600" text-anchor="middle" fill="currentColor">adapters/</text>
+      <text x="620" y="118" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.7">D1 · KV · R2 · Vectorize</text>
+      <text x="620" y="134" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.7">AI · Stripe · x402</text>
+      <text x="620" y="162" font-size="10.5" text-anchor="middle" fill="currentColor" opacity="0.55">only these touch the world</text>
+      <line x1="230" y1="125" x2="284" y2="125" stroke="currentColor" stroke-width="1.4" marker-end="url(#arr)"/>
+      <text x="257" y="115" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">calls</text>
+      <line x1="530" y1="125" x2="476" y2="125" stroke="currentColor" stroke-width="1.4" marker-end="url(#arr)"/>
+      <text x="503" y="115" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">implements</text>
+      <rect x="290" y="245" width="180" height="40" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="380" y="269" font-size="12" text-anchor="middle" fill="currentColor">packages/schema</text>
+      <line x1="380" y1="180" x2="380" y2="239" stroke="currentColor" stroke-width="1.2" marker-end="url(#arr)"/>
+      <text x="392" y="215" font-size="10" fill="currentColor" opacity="0.7">types</text>
+      <rect x="50" y="245" width="180" height="40" rx="3" fill="none" stroke="currentColor" stroke-dasharray="4 3" stroke-width="1.2"/>
+      <text x="140" y="269" font-size="12" text-anchor="middle" fill="currentColor">Studio · SDKs · agents</text>
+      <path d="M 140 245 L 140 186" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="4 3" fill="none" marker-end="url(#arrA)"/>
+      <text x="152" y="215" font-size="10" fill="var(--accent)">public contract only</text>
+    </svg>
+    <figcaption><b>The dependency law.</b> Arrows may only point inward, toward core. Nothing outside the worker touches anything but the published API.</figcaption>
+  </figure>
+  <p>Why this shape, for us specifically: development stays AI-assisted, and AI-generated code drifts unless the rules are checkable without judgment. Every wall above is a grep or an import-graph check — "no SQL in <code>entry/</code>", "no Cloudflare types in <code>core/</code>" — so review catches violations mechanically instead of relying on vigilance. The prototype's worst bugs were all wall violations of exactly this kind.</p>
+  <p>Studio (the dashboard) is a pure client of the public API. It gets no private endpoints, ever — so anything the dashboard can do, a customer's own code can do, and the API can never silently rot.</p>
+</section>
+
+<section id="s4" aria-label="The pipeline">
+  <p class="eyebrow">04 · Execution</p>
+  <h2 class="display">One pipeline, two ways in</h2>
+  <p class="lede">Refinement is a fixed seven-stage chain. An API call runs it live in the request; the scheduler runs the identical chain as a durable workflow. There is no third path, and the two can never drift apart.</p>
+  <figure class="draft">
+    <svg viewBox="0 0 880 330" role="img" aria-label="Pipeline diagram: seven filters from fetch to notify form one chain; the on-demand path enters synchronously from API and MCP requests; the scheduled path enters via cron, a dispatch queue, and a workflow that runs each filter as one durable step.">
+      <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+      <text x="30" y="52" font-size="11" font-family="IBM Plex Mono, monospace" fill="currentColor" opacity="0.65">on-demand · API / MCP / agents — runs in-request, answers in seconds</text>
+      <line x1="30" y1="66" x2="440" y2="66" stroke="currentColor" stroke-width="1.2" opacity="0.75"/>
+      <line x1="440" y1="66" x2="440" y2="128" stroke="currentColor" stroke-width="1.2" opacity="0.75" marker-end="url(#arr2)"/>
+      <g font-size="12" font-weight="600" text-anchor="middle">
+        <rect x="30" y="135" width="92" height="44" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><text x="76" y="161" fill="currentColor">fetch</text>
+        <rect x="152" y="135" width="92" height="44" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><text x="198" y="161" fill="currentColor">sanitize</text>
+        <rect x="274" y="135" width="92" height="44" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><text x="320" y="161" fill="currentColor">extract</text>
+        <rect x="396" y="135" width="92" height="44" rx="3" fill="none" stroke="var(--accent)" stroke-width="2"/><text x="442" y="161" fill="var(--accent)">validate</text>
+        <rect x="518" y="135" width="92" height="44" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><text x="564" y="161" fill="currentColor">diff</text>
+        <rect x="640" y="135" width="92" height="44" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><text x="686" y="161" fill="currentColor">store</text>
+        <rect x="762" y="135" width="92" height="44" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><text x="808" y="161" fill="currentColor">notify</text>
+      </g>
+      <g stroke="currentColor" stroke-width="1.3">
+        <line x1="122" y1="157" x2="146" y2="157" marker-end="url(#arr2)"/>
+        <line x1="244" y1="157" x2="268" y2="157" marker-end="url(#arr2)"/>
+        <line x1="366" y1="157" x2="390" y2="157" marker-end="url(#arr2)"/>
+        <line x1="488" y1="157" x2="512" y2="157" marker-end="url(#arr2)"/>
+        <line x1="610" y1="157" x2="634" y2="157" marker-end="url(#arr2)"/>
+        <line x1="732" y1="157" x2="756" y2="157" marker-end="url(#arr2)"/>
+      </g>
+      <text x="442" y="205" font-size="10.5" text-anchor="middle" fill="var(--accent)">schema fails → run fails, snapshot quarantined, nothing billed</text>
+      <text x="30" y="296" font-size="11" font-family="IBM Plex Mono, monospace" fill="currentColor" opacity="0.65">scheduled · cron → dispatch queue → durable workflow — one filter = one retryable step</text>
+      <line x1="30" y1="276" x2="440" y2="276" stroke="currentColor" stroke-width="1.2" opacity="0.75"/>
+      <line x1="440" y1="276" x2="440" y2="186" stroke="currentColor" stroke-width="1.2" opacity="0.75" marker-end="url(#arr2)"/>
+    </svg>
+    <figcaption><b>Same chain, two entrances.</b> The validate gate is the product promise: schema-checked data or a refusal — never a guess.</figcaption>
+  </figure>
+  <h3>The decisions inside this picture</h3>
+  <p><strong>Durable workflows, not a hand-rolled scheduler.</strong> Each scheduled run is a Cloudflare Workflow instance: if the site times out at stage two, only stage two retries — we don't re-pay for the model call that already succeeded. The verified current limits comfortably cover launch scale (50,000 concurrent runs; ~80,000 runs/month inside the free step allowance).</p>
+  <p><strong>Everything assumes retries happen.</strong> Queues deliver at least once, so every step is idempotent by construction — a redelivered message can't spawn a duplicate run, double-bill a query, or fire a webhook twice. The run ID <em>is</em> the workflow ID; creating it twice is a no-op.</p>
+  <p><strong>The prototype's worst habit is banned by name.</strong> When the model returned garbage, the old code invented a fallback object and served it as if real. The contract now reads: a schema failure fails the run, quarantines the raw page, and bills nothing.</p>
+</section>
+
+<section id="s5" aria-label="Who owns what">
+  <p class="eyebrow">05 · Tenancy</p>
+  <h2 class="display">Who owns what</h2>
+  <p class="lede">Every row in the system lives in exactly one place: the platform's shared corpus, or one customer workspace. There is no third state, and no code path that reads without saying whose data it wants.</p>
+  <div class="cardgrid">
+    <div class="card"><span class="tag good">Platform corpus</span><h4>Refined once, served to everyone</h4><p>The public verticals are the unit-economics engine: written only by platform pipeline runs; a customer request can read them cheaply but never mutate them.</p></div>
+    <div class="card"><span class="tag good">Workspace-owned</span><h4>Private by default</h4><p>A customer's custom schema is their IP, so everything it produces is their data. It becomes visible to others only through an explicit marketplace listing they create.</p></div>
+  </div>
+  <p><strong>Isolation is enforced by construction, not by discipline.</strong> The prototype's worst leak was trusting a workspace ID sent by the client. Now the "whose data" value is a sealed type that only the tenancy module can mint from a verified login, key, or payment — request data physically cannot become a scope. A feature developer <em>cannot</em> write the leak, because the type system won't let the value exist.</p>
+  <p>Cross-tenant reads exist in exactly three sanctioned forms — a marketplace grant (after entitlement check), an audited admin scope, and search unions over platform + own + granted data. Anything else has no API to call.</p>
+</section>
+
+<section id="s6" aria-label="Money">
+  <p class="eyebrow">06 · Billing</p>
+  <h2 class="display">Money: one ledger, two rails</h2>
+  <p class="lede">Humans subscribe through Stripe; agents pay per query through x402 wallets or drive-by micropayments. Every unit of value — both rails, all four principal types (human, API key, agent token, drive-by payer) — lands as one row in one append-only ledger.</p>
+  <figure class="draft">
+    <svg viewBox="0 0 800 350" role="img" aria-label="Money flow: Stripe subscriptions and top-ups on the left, agent wallets and x402 drive-by payments on the right, all writing through the metering module into a single append-only usage_events ledger; invoices, quotas, 402 responses, and creator payouts are all reads of that ledger.">
+      <defs><marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+      <g font-size="12" font-weight="600" text-anchor="middle">
+        <rect x="40" y="40" width="180" height="50" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="130" y="61" fill="currentColor">Stripe rail</text>
+        <text x="130" y="78" font-size="10.5" font-weight="400" fill="currentColor" opacity="0.7">subscriptions · top-ups</text>
+        <rect x="580" y="40" width="180" height="50" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="670" y="61" fill="currentColor">x402 rail</text>
+        <text x="670" y="78" font-size="10.5" font-weight="400" fill="currentColor" opacity="0.7">wallets · drive-by payment</text>
+        <rect x="310" y="120" width="180" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="400" y="141" fill="currentColor">core/metering</text>
+        <text x="400" y="158" font-size="10.5" font-weight="400" fill="currentColor" opacity="0.7">hold → settle / release</text>
+        <rect x="290" y="230" width="220" height="56" rx="3" fill="none" stroke="var(--accent)" stroke-width="2"/>
+        <text x="400" y="252" fill="var(--accent)">usage_events</text>
+        <text x="400" y="270" font-size="10.5" font-weight="400" fill="currentColor" opacity="0.7">append-only · price frozen at serve</text>
+      </g>
+      <line x1="180" y1="90" x2="330" y2="116" stroke="currentColor" stroke-width="1.3" marker-end="url(#arr3)"/>
+      <text x="230" y="98" font-size="10" fill="currentColor" opacity="0.75">verified events, replay-proof</text>
+      <line x1="620" y1="90" x2="470" y2="116" stroke="currentColor" stroke-width="1.3" marker-end="url(#arr3)"/>
+      <text x="575" y="98" font-size="10" text-anchor="end" fill="currentColor" opacity="0.75">proofs single-use</text>
+      <line x1="400" y1="172" x2="400" y2="224" stroke="currentColor" stroke-width="1.3" marker-end="url(#arr3)"/>
+      <text x="412" y="200" font-size="10" fill="currentColor" opacity="0.75">the only writer</text>
+      <g stroke="currentColor" stroke-width="1.2">
+        <line x1="330" y1="286" x2="240" y2="320" marker-end="url(#arr3)"/>
+        <line x1="380" y1="286" x2="360" y2="320" marker-end="url(#arr3)"/>
+        <line x1="430" y1="286" x2="455" y2="320" marker-end="url(#arr3)"/>
+        <line x1="480" y1="286" x2="575" y2="320" marker-end="url(#arr3)"/>
+      </g>
+      <g font-size="10.5" fill="currentColor" opacity="0.8">
+        <text x="215" y="338" text-anchor="middle">invoices</text>
+        <text x="352" y="338" text-anchor="middle">quotas</text>
+        <text x="470" y="338" text-anchor="middle">402 responses</text>
+        <text x="608" y="338" text-anchor="middle">creator payouts</text>
+      </g>
+    </svg>
+    <figcaption><b>Reads, not recalculations.</b> Everything downstream of the ledger is a read of it — nothing recomputes historical money from today's prices.</figcaption>
+  </figure>
+  <p>The adversarial review attacked this layer hardest, and the contract now makes four failure modes structurally impossible:</p>
+  <div class="cardgrid">
+    <div class="card"><h4>No double-spend</h4><p>Wallet debits are hold → settle/release in one atomic batch. A hundred concurrent agent calls against a one-query balance can't overdraw — the predicate and the write commit together.</p></div>
+    <div class="card"><h4>No replayed payments</h4><p>An x402 payment proof is single-use (uniqueness enforced in the ledger); a redelivered Stripe webhook is deduplicated by event ID. Replays grant nothing.</p></div>
+    <div class="card"><h4>No revisionist billing</h4><p>Prices are frozen into the row at serve time. Refunds and credits are new compensating rows from three named authorities — history is never edited.</p></div>
+    <div class="card"><h4>No anonymous-refund machinery</h4><p>Drive-by x402 runs verify payment first but settle only after delivery. A failed run is simply never settled — so we never owe an anonymous wallet a refund.</p></div>
+  </div>
+  <p>You'll ask "billed as cached or billed as fresh?" — so did the reviewers. One function in the metering module classifies every serve from the facts (cache-fresh vs. live extraction); feature code reports facts and can never pick its own price.</p>
+</section>
+
+<section id="s7" aria-label="Security posture">
+  <p class="eyebrow">07 · Security posture</p>
+  <h2 class="display">Every prototype flaw, answered structurally</h2>
+  <p class="lede">"Proper engineering and audit" was the whole engagement. The contract answers each shipped flaw with a rule that makes the flaw unwritable — not a patch, a wall.</p>
+  <div class="tablewrap"><table>
+    <tr><th>The prototype shipped</th><th>The contract's answer</th></tr>
+    <tr><td>Hardcoded founder passcodes</td><td>Admin is a role on named accounts, second factor required, granted only by another admin, bootstrapped by runbook — passcodes cease to exist</td></tr>
+    <tr><td>Any Pro key = platform admin</td><td>Admin surfaces accept founder Studio sessions only; no key or token of any kind reaches them</td></tr>
+    <tr><td>Client-supplied workspace IDs trusted</td><td>Scopes are sealed values only the tenancy module can mint from a verified principal</td></tr>
+    <tr><td>Unauthenticated, unmetered MCP</td><td>MCP resolves through the same auth and the same ledger as REST — a tool call can never do what its REST twin would deny</td></tr>
+    <tr><td>Webhooks as an SSRF hole</td><td>All outbound URLs — fetches <em>and</em> deliveries — pass one SSRF policy, re-validated after DNS resolution</td></tr>
+    <tr><td>Prompt injection unconsidered</td><td>Web content is tainted forever: re-fenced on every model call, never allowed to steer a fetch or a write, rendered inert in badges and UI</td></tr>
+    <tr><td>Audit tables read but never written</td><td>Auth, billing, admin, and denial events are append-only rows nothing can edit — the SOC 2 evidence trail starts on day one</td></tr>
+  </table></div>
+</section>
+
+<section id="s8" aria-label="The sixteen rules">
+  <p class="eyebrow">08 · Reference</p>
+  <h2 class="display">The sixteen rules</h2>
+  <p class="lede">The full contract, one card per decision. Each one names the divergence it prevents — expand what you want to interrogate; the spine file carries the binding wording. The three cards marked <span class="cs">countersign</span> back the calls waiting for you in section 09.</p>
+  <div class="adgrid">
+    <details class="adcard"><summary><span class="id">AD-1</span><span class="t">Platform is Cloudflare <span class="cs">countersign</span></span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> infra sprawl a two-person team can't operate.</p><p>All compute and state on Cloudflare primitives. External model providers only via AI Gateway; anything else moving off-platform is a contract change.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-2</span><span class="t">One deployable API worker</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> premature microservices.</p><p>Single worker, three layers with lintable walls. A second service requires a measured platform limit, on record.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-3</span><span class="t">One refinement core, one run record</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> sync and scheduled paths drifting apart.</p><p>One filter chain; one filter = one workflow step; every execution — either mode — creates exactly one run record that billing, provenance, and quarantine all key off.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-4</span><span class="t">Workflows execute, Queues dispatch, all idempotent</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> duplicate runs, double billing, double webhooks, silent webhook death.</p><p>Retries are assumed everywhere. Deliveries are signed, recorded, retried, and visibly paused on exhaustion — never dropped.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-5</span><span class="t">Drizzle owns the schema</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> the split-brain schema bug that already shipped.</p><p>Tables defined once in TypeScript; migrations, row types, and validators are all generated from it. Hand-written DDL is a defect.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-6</span><span class="t">Two data classes; scopes are minted, never asserted <span class="cs">countersign</span></span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> cross-tenant leaks; two owners of one entity.</p><p>Platform corpus vs. workspace resources; sealed scope values from the tenancy module; three sanctioned cross-tenant read forms; platform rows written only by platform runs.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-7</span><span class="t">Four principals, one auth middleware</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> parallel auth schemes; cached credentials outliving revocation.</p><p>Human, API key, agent token, drive-by payer — one resolver. Authorization state read fresh per request; kill-switch binds at the next call. Admin = MFA'd role.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-8</span><span class="t">One schema source per operation</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> MCP tools and REST drifting into different shapes for the same operation.</p><p>Route definitions generate validation, types, and the OpenAPI doc; MCP tool schemas derive from the same source; Studio and SDKs consume the contract.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-9</span><span class="t">Validate both boundaries; failure fails the run</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> the synthesized-fallback habit; unvalidated inbound JSON.</p><p>Every request validated at the edge; model output passes the schema or the run fails and quarantines. No guesses served, ever.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-10</span><span class="t">One error envelope</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> internal errors leaking; per-route error dialects.</p><p>One shape, one taxonomy, one place that maps domain errors to the wire.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-11</span><span class="t">The append-only ledger</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> unmetered surfaces; revisionist money; payment replay.</p><p>One writer, a fixed row contract with prices frozen at serve, delivery-synchronous appends, single-use payment evidence, compensating events from three authorities only. Audit events follow the same pattern.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-12</span><span class="t">D1 is truth; caches are projections; R2 holds raw</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> multi-store writes with no source of truth; takedowns that keep serving.</p><p>Caches and vectors are rebuildable; raw snapshots owner-scoped with bounded retention; an opt-out purges storage, not just fetching.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-13</span><span class="t">Three environments, config through bindings</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> hardcoded URLs and price IDs; testing in production.</p><p>Local, staging, production; CI gates every merge; promotion is a manual, deliberate act.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-14</span><span class="t">One policed fetch boundary; taint is forever</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> SSRF; disrespectful crawling; injected content steering the system.</p><p>One fetch port enforcing SSRF policy, robots.txt, identifiable UA, pacing, and the opt-out registry. Web content stays fenced on every later model call and inert in every rendering.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-15</span><span class="t">One wallet owner; verify, serve, then settle <span class="cs">countersign</span></span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> double-spend; anonymous-refund machinery; kill-switch ambiguity.</p><p>Metering owns the wallet; debits are atomic hold→settle/release; x402 verifies before serving and settles only after delivery — failures never settle.</p></div></details>
+    <details class="adcard"><summary><span class="id">AD-16</span><span class="t">One custom-schema format, one compiler</span><span class="chev">▶</span></summary><div class="body"><p><span class="k">Prevents:</span> the same schema validating differently on different surfaces — flipping what gets served and billed.</p><p>A constrained JSON Schema profile, checked at publish; one compiler emits the runtime validator, the MCP tool shape, and the OpenAPI components.</p></div></details>
+  </div>
+</section>
+
+<section id="s9" aria-label="Your four calls and what's next">
+  <p class="eyebrow">09 · Countersign</p>
+  <h2 class="display">Your four calls &amp; what's next</h2>
+  <p class="lede">Everything in this deck is decided and defensible — but these four decisions shape the product enough that you should own them too. Disagree with any of them, and now is the cheap moment to say so.</p>
+  <ol class="discuss">
+    <li id="q1"><strong>Cloudflare, ratified.</strong> We double down on the platform rather than hedging across clouds — betting that near-zero ops matters more to a two-person company than portability. <span class="mute">Binding rule: AD-1.</span></li>
+    <li id="q2"><strong>Customer refinements are private by default.</strong> A customer's custom-schema output is their data; it enters the shared economy only when they list it. We trade some of the corpus-growth flywheel for a clean IP story. <span class="mute">Binding rule: AD-6.</span></li>
+    <li id="q3"><strong>Drive-by agent payments settle only after delivery.</strong> Failed runs are simply never settled — so there is nothing to refund — which kills a whole class of anonymous-refund machinery, at the cost of slightly later revenue recognition. <span class="mute">Binding rule: AD-15.</span></li>
+    <li id="q4"><strong>Marketplace pays by visible accrual at launch; live payouts fast-follow.</strong> The reviewers found the fraud loop in launch-day payouts (chargeback + instant payout = free money); shipping accrual first closes it, with payouts following in Phase 3. <span class="mute">Lives in the deferral register below, not the rules.</span></li>
+  </ol>
+  <h3>Deliberately postponed — with tripwires</h3>
+  <p class="mute">A good contract also says what it won't decide yet. Each deferral carries the condition that reopens it, so nothing is postponed into oblivion.</p>
+  <ul class="trigger">
+    <li><span class="what">x402 facilitator &amp; chain</span><span class="when">Phase 0 integration spike — the protocol and settle order are committed; the vendor is not</span></li>
+    <li><span class="what">Pricing numbers</span><span class="when">Phase 0 exercise, using real telemetry unit costs — the units and row contract are already fixed</span></li>
+    <li><span class="what">Creator payouts (Stripe Connect)</span><span class="when">First Phase 3 fast-follow; visible ledger accrual is the launch mechanism</span></li>
+    <li><span class="what">D1 growth strategy</span><span class="when">Tripwire at 5 GB — half the platform cap</span></li>
+    <li><span class="what">Splitting the worker</span><span class="when">Only on a measured platform limit, documented</span></li>
+    <li><span class="what">Snapshot retention &amp; deletion workflow</span><span class="when">Before any corpus reaches the marketplace, or the first takedown — whichever is first</span></li>
+    <li><span class="what">Audit tamper-evidence beyond D1</span><span class="when">At SOC 2 readiness work, or the first enterprise contract</span></li>
+    <li><span class="what">Extension, CLI, and frontend toolchain upgrades</span><span class="when">Post-launch; all bound by the same API contract when they arrive</span></li>
+  </ul>
+  <h3>What happens next</h3>
+  <p>The spine becomes the standing companion to a machine-readable spec, which then breaks into epics and stories — every one of them citing the rule IDs above, so review always has a contract to point at. The pipeline core and the metering ledger are the natural first builds: everything else leans on those two.</p>
+  <p class="foot">REFINERY BLUEPRINT · distilled from ARCHITECTURE-SPINE.md (AD-1..AD-16) · sources: launch PRD 2026-08-29 + full code sweep · gate: rubric / verification / adversarial / security — all findings resolved</p>
+</section>
+
+</main>
+</div>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll("nav.rail a"));
+    var sections = links.map(function (a) { return document.querySelector(a.getAttribute("href")); });
+    function setLive(id) {
+      links.forEach(function (a) { a.classList.toggle("live", a.getAttribute("href") === "#" + id); });
+    }
+    if ("IntersectionObserver" in window) {
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { if (e.isIntersecting) setLive(e.target.id); });
+      }, { rootMargin: "-35% 0px -55% 0px" });
+      sections.forEach(function (s) { if (s) obs.observe(s); });
+    }
+    function currentIndex() {
+      var y = window.scrollY + window.innerHeight * 0.4;
+      for (var i = sections.length - 1; i >= 0; i--) {
+        if (sections[i] && sections[i].offsetTop <= y) return i;
+      }
+      return 0;
+    }
+    document.addEventListener("keydown", function (ev) {
+      if (ev.target && /INPUT|TEXTAREA|SELECT/.test(ev.target.tagName)) return;
+      var k = ev.key.toLowerCase();
+      var d = (k === "arrowright" || k === "j") ? 1 : (k === "arrowleft" || k === "k") ? -1 : 0;
+      if (!d) return;
+      ev.preventDefault();
+      var next = Math.min(sections.length - 1, Math.max(0, currentIndex() + d));
+      if (sections[next]) sections[next].scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  })();
+</script>
