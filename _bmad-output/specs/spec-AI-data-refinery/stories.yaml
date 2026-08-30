@@ -1,0 +1,189 @@
+- id: "1"
+  title: Platform scaffold & environments
+  description: >-
+    Restructure the monorepo to the spine's structural seed (core/adapters/entry,
+    Drizzle schema kernel in packages/schema) with local/staging/production
+    environments, CI gates, and the single error envelope. Foundation for every
+    later story; no product features.
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Binding: AD-2, AD-5, AD-10, AD-13. Pin versions exactly per the spine's Stack
+    table; layout per Structural Seed. Zero hardcoded URLs/price IDs/model IDs.
+- id: "2"
+  title: Identity, workspaces & tenancy
+  description: >-
+    CAP-6: Better Auth sessions, the four-role matrix enforced in core on every
+    path, workspace API keys, and admin-as-role. Includes the branded OwnerScope
+    plus the three derived scopes.
+  spec_checkpoint: true
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Binding: AD-6 (scope provenance — OwnerScope constructible only by
+    core/tenancy) and AD-7 in full (one auth middleware, MFA'd admin role,
+    authorization state read from D1 per request, Better Auth fences).
+    Done requires NFR-025 fail-closed cross-tenant tests passing.
+- id: "3"
+  title: Refinement pipeline core
+  description: >-
+    CAP-1: the seven-filter chain (fetch through notify) with strict validation,
+    quarantine on schema failure, run records for every execution, provenance,
+    and token economics. Sync entry mode only; scheduling arrives in story 4.
+  invoke_dev_with: >-
+    Binding: AD-3 (one chain, one REFINEMENT_RUN per execution, reference-passing
+    I/O), AD-9 (failure fails the run, never a synthesized fallback), AD-14
+    (single policed fetch port, persistent untrusted taint).
+- id: "4"
+  title: Scheduled corpus & async substrate
+  description: >-
+    CAP-2: Workflows execute refinement runs, Queues dispatch them from cron,
+    tracked entities carry refresh policies, and the dev SDK vertical goes
+    genuinely live with real sources and connectors.
+  invoke_dev_with: >-
+    Binding: AD-4 (cron only enqueues; Workflow instance id = run_id; idempotent
+    everywhere). Crawl pacing via next_fetch_at scheduling in D1 per the
+    rate-limiting convention. FR-013 defines the live-vertical bar.
+- id: "5"
+  title: Change intelligence
+  description: >-
+    CAP-3 first half: versioned snapshots, semantic diffs with the canonical
+    CRITICAL/MAJOR/MINOR severity scale, queryable history, the authenticated
+    global change feed, and public SVG badges.
+  invoke_dev_with: >-
+    Severity enums defined once in packages/schema (Severity convention).
+    Quarantined snapshots are never diff bases (FR-020). Badges read at platform
+    scope per AD-6; refined values render inert per AD-14.
+- id: "6"
+  title: Webhooks & notifications
+  description: >-
+    CAP-3 second half: subscriptions with event-type and entity filters, signed
+    deliveries with bounded retries, the visible paused/replay state, chat-native
+    destinations, and send-test-event.
+  invoke_dev_with: >-
+    Binding: AD-4 webhook clauses — notify filter publishes one typed domain
+    event; core/notify owns matching/fan-out/delivery records at dequeue;
+    delivery targets pass the same SSRF policy as the fetch port.
+- id: "7"
+  title: Metering ledger, quotas & 402
+  description: >-
+    CAP-7 core: the append-only usage_events ledger with its full row contract,
+    the single classification function for the two billable units, audit events,
+    free-tier quotas, and the machine-readable 402 upsell for humans and agents.
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Binding: AD-11 in full — price frozen at serve time, delivery-synchronous
+    append, payment-evidence idempotency, compensating events from three
+    authorities only, no update/delete path. Callers report facts, never unit types.
+- id: "8"
+  title: Stripe rail
+  description: >-
+    CAP-7: Stripe subscriptions with signature-verified, webhook-driven lifecycle
+    (provision on payment, revoke on end) and real-money wallet top-ups. Plan
+    catalog stays founder-editable configuration.
+  invoke_dev_with: >-
+    stripe fetch client per Stack table; webhook processing idempotent by Stripe
+    event id (AD-11); a top-up without a successful charge is a defect (FR-063).
+- id: "9"
+  title: Agent rail
+  description: >-
+    CAP-7: guardian-governed prepaid wallets with agent tokens and the immediate
+    kill-switch, plus account-less x402 payment. Completes the money layer so
+    full billing reconciliation can run.
+  spec_checkpoint: true
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Binding: AD-15 in full — core/metering owns the wallet; hold, settle, release
+    in one D1 batch; x402 middleware verify-only pre-serve, settlement
+    post-delivery from the ledger row, failures never settle. Kill-switch: prior
+    holds settle, no new holds after.
+- id: "10"
+  title: Public REST contract & search
+  description: >-
+    CAP-4: the versioned REST surface defined route-by-route with zod-openapi,
+    the published OpenAPI document, discovery endpoints, and hybrid
+    semantic-plus-lexical search.
+  invoke_dev_with: >-
+    Binding: AD-8 (one schema source per operation), AD-10 envelope, pagination
+    convention (cursor-based). Vectorize owner scope = namespace per AD-6.
+    Lexical search: no unbounded LIKE scans (Deferred interim rule).
+- id: "11"
+  title: MCP server
+  description: >-
+    CAP-4: the authenticated MCP surface on the Agents SDK — OAuth 2.1 with
+    resource indicators, tools derived from the same Zod sources as REST, and
+    metering parity with REST. Core product demoable end-to-end after this story.
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Binding: FR-031 (2026-07-28 auth spec), AD-7 (audience-bound tokens, one
+    workspace at consent, tool authorization = REST twin), AD-8 (tool schemas
+    derive, never redefine), FR-032 metering parity.
+- id: "12"
+  title: Studio shell & data views
+  description: >-
+    CAP-5 partial: decompose the SPA into routed views with server state,
+    consuming the generated OpenAPI client — corpus browsing, version/diff
+    time-travel (FR-044), and usage views.
+  invoke_dev_with: >-
+    Stack: react-router 7.18.3 + TanStack Query on React 18 (pins in Stack
+    table). Studio is a pure public-API client per AD-8 — no privileged
+    endpoints, no role logic of its own.
+- id: "13"
+  title: Custom schemas & visual builder
+  description: >-
+    CAP-5: the canonical custom-schema document and its single compiler, the
+    no-code builder with raw-JSON expert mode, live-URL testing, publish
+    provisioning the MCP tool and REST access, and cloneable public blueprints.
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Binding: AD-16 — one constrained JSON Schema profile validated against a
+    meta-schema at publish; one compiler emits the runtime validator, MCP tool
+    inputSchema, and OpenAPI components; FR-042's live preview renders the
+    compiler's own output.
+- id: "14"
+  title: Onboarding & developer experience
+  description: >-
+    CAP-11: guided quickstarts per surface, one-click MCP client configuration
+    for agentic IDEs, the signed-in playground with measured latency and token
+    savings, copy-ready snippets, and the instrumented activation funnel.
+  invoke_dev_with: >-
+    FR-110..114. Playground displays measured numbers only (NFR-003); funnel
+    events must feed the time-to-first-refined-query and bailout metrics (§5).
+- id: "15"
+  title: Operations console
+  description: >-
+    CAP-8: admin surfaces on real accounts — customer and fleet governance,
+    real-telemetry analytics, audit-logged courtesy actions visibly distinct in
+    the ledger, and the no-deploy pricing editor.
+  invoke_dev_with: >-
+    Binding: AD-7 admin clauses (Studio sessions only, MFA, runbook bootstrap);
+    FR-072 zero fabricated metrics; courtesy actions are audited compensating
+    events per AD-11.
+- id: "16"
+  title: Marketplace
+  description: >-
+    CAP-9: browse and install creator listings, 80/20 accrual from launch with
+    fraud controls (holdback, self-dealing exclusion, chargeback clawback),
+    creator pricing within bounds, and curation.
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Binding: FR-081/082; cross-workspace reads only through the grant scope
+    minted by core/marketplace (AD-6, install required); attribution via the
+    ledger's lst_ reference and split basis (AD-11).
+- id: "17"
+  title: Fine-tuning export
+  description: >-
+    CAP-10: entitlement-gated corpus-slice exports in OpenAI JSONL, Llama3,
+    Alpaca, and RAG-chunk formats, including diff-derived training examples.
+  invoke_dev_with: >-
+    Entitlements gate access; the ledger still records usage — an export of N
+    entities is N cached_read acts (AD-11). Owner-scoped reads only (AD-6).
+- id: "18"
+  title: Client SDKs & integrations
+  description: >-
+    CAP-12: the TypeScript SDK, LangChain loader + tools package, and LlamaIndex
+    reader — rebuilt from packages/integrations into packages/sdk and published
+    to npm under the commercial brand. Launch candidate after this story.
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Consume generated OpenAPI types per AD-8; build properly (no committed
+    artifacts). npm publishing is blocked on the commercial name (OQ-1) — build
+    publish-ready and flag if OQ-1 is still open.
