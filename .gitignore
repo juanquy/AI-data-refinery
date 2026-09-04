@@ -26,7 +26,19 @@ pnpm-debug.log*
 # OS & Editor
 .DS_Store
 Thumbs.db
+.directory
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# Large Media & Training Videos
+*.mp4
+*.mov
+
+# Python Bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+
