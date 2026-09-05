@@ -27,7 +27,7 @@ app.use(
   cors({
     origin: "*",
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "X-Refinery-Key", "X-Custom-Auth"]
+    allowHeaders: ["Content-Type", "Authorization", "X-Refinery-Key", "X-Custom-Auth", "X-Founder-Passcode"]
   })
 );
 

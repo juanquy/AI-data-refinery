@@ -878,10 +878,11 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
   });
 
   const getManagementHeaders = () => {
-    const code = founderPasscode || "Refinery#Founder2026!";
+    const code = founderPasscode || (typeof sessionStorage !== "undefined" ? sessionStorage.getItem("refinery_founder_code") : null) || "Refinery#Founder2026!";
     return {
       "Content-Type": "application/json",
-      "X-Founder-Passcode": code
+      "X-Founder-Passcode": code,
+      "Authorization": `Bearer ${code}`
     };
   };
 
@@ -909,6 +910,9 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
         setAdminModalOpen(false);
         setAdminPasscodeInput("");
         setAdminError(null);
+        setTimeout(() => {
+          fetchManagementData();
+        }, 100);
       } else {
         setAdminError(data.error || "Invalid Founder Passcode or API Key. Try again.");
       }
@@ -1117,8 +1121,12 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
   useEffect(() => {
     if (activeTab === "management") {
       fetchManagementData();
+      const interval = setInterval(() => {
+        fetchManagementData();
+      }, 8000);
+      return () => clearInterval(interval);
     }
-  }, [activeTab]);
+  }, [activeTab, founderSubTab]);
 
   const handleCreatePipeline = async (e: React.FormEvent) => {
     e.preventDefault();
