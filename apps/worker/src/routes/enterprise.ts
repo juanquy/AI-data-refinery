@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { Env } from "../types";
+import type { Env } from "../types";
 
 export const enterpriseRouter = new Hono<{ Bindings: Env }>();
 

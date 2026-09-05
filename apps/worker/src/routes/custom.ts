@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { CustomRefinementRequestSchema } from "@data-refinery/schema";
-import { Env } from "../types";
+import type { Env } from "../types";
 import { extractStructuredData, fetchWebpageContent } from "../lib/extractor";
 import { listEntitiesByDomain, saveRefinedEntity } from "../lib/db";
 

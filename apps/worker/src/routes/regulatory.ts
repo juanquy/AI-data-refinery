@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { RegulatoryComplianceSchema } from "@data-refinery/schema";
-import { Env } from "../types";
+import type { Env } from "../types";
 import { extractStructuredData, fetchWebpageContent } from "../lib/extractor";
 import { getLatestEntity, listEntitiesByDomain, saveRefinedEntity } from "../lib/db";
 

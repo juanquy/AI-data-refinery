@@ -1,4 +1,4 @@
-import { Env } from "../types";
+import type { Env } from "../types";
 
 /**
  * Generate 768-dimension vector embedding using Cloudflare Workers AI BGE model

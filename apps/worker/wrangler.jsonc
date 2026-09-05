@@ -35,5 +35,50 @@
   },
   "observability": {
     "enabled": true
+  },
+  // Deployed automatically by .github/workflows/deploy.yml on every push to main.
+  // Bindings are not inherited by environments, so each one is declared again here.
+  // TODO(owner): create the staging resources and replace the placeholder ids:
+  //   npx wrangler d1 create refinery-db-staging
+  //   npx wrangler kv namespace create KV_CACHE --env staging
+  //   npx wrangler vectorize create refinery-vectors-staging --dimensions=768 --metric=cosine
+  //   npx wrangler secret put STRIPE_SECRET_KEY --env staging   (test-mode key; repeat for STRIPE_WEBHOOK_SECRET, AUTH_TOKEN)
+  "env": {
+    "staging": {
+      "name": "data-refinery-worker-staging",
+      "ai": {
+        "binding": "AI"
+      },
+      "vars": {
+        // TODO(owner): Stripe TEST-mode price id
+        "STRIPE_PRO_PRICE_ID": "price_TODO_STAGING_TEST_MODE"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "refinery-db-staging",
+          "database_id": "TODO_STAGING_D1_DATABASE_ID",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "KV_CACHE",
+          "id": "TODO_STAGING_KV_NAMESPACE_ID"
+        }
+      ],
+      "vectorize": [
+        {
+          "binding": "VECTOR_INDEX",
+          "index_name": "refinery-vectors-staging"
+        }
+      ],
+      "triggers": {
+        "crons": ["0 */6 * * *"]
+      },
+      "observability": {
+        "enabled": true
+      }
+    }
   }
 }

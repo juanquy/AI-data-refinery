@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { Env } from "../types";
+import type { Env } from "../types";
 import { createStripeCheckoutSession, generateApiKey, getStripeCheckoutSession } from "../lib/stripe";
 
 export const billingRouter = new Hono<{ Bindings: Env }>();

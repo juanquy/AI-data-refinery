@@ -75,7 +75,7 @@ npm install
 npm run build --workspace=packages/schema
 
 # Apply local D1 database migrations with demo seed data
-npm run db:migrate:local
+npm run db:migrate:local -w apps/worker
 ```
 
 ### Run Locally
@@ -116,4 +116,4 @@ Add the refinery to your `claude_desktop_config.json` or `.cursor/mcp.json`:
 ---
 
 ## 📜 License
-MIT
+Business Source License 1.1 (BUSL-1.1). See [LICENSE](LICENSE).
