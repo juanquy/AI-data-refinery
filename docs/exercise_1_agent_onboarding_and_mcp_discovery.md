@@ -3,6 +3,8 @@
 > **How to use this file:**  
 > Copy the prompt block under **"AGENT PROMPT & INSTRUCTIONS"** and paste it directly into your AI Agent (ChatGPT, Claude, Cursor, Devin, AutoGPT, or custom agent).  
 > The agent will execute the exercise autonomously, self-provision credentials, discover MCP tools, and report back to you.
+> 
+> 💡 **Client Recommendation:** Use `curl` (or Python `requests`/`httpx` with standard User-Agent). Note that raw sandboxed Python `urllib` can trigger a 403 WAF block on the edge `/mcp` route. Use `curl` for 100% reliable execution.
 
 ---
 

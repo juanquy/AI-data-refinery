@@ -3,6 +3,8 @@
 > **How to use this file:**  
 > Copy the prompt block under **"AGENT PROMPT & INSTRUCTIONS"** and paste it directly into **Agent Alpha** (or your developer-focused AI agent).  
 > Make sure the agent has its token from Exercise 1 (`ref_agent_...`). If not, it can use the one-line fallback command provided.
+> 
+> 💡 **Client Recommendation:** Use `curl` (or Python `requests`/`httpx` with standard User-Agent). Note that raw sandboxed Python `urllib` can trigger a 403 WAF block on the edge `/mcp` route. Use `curl` for 100% reliable execution.
 
 ---
 

@@ -1,8 +1,10 @@
 # Exercise 4: Semantic Diff Monitoring & Autonomous Fleet Governance
 
 > **How to use this file:**  
-> Copy the prompt block under **"AGENT PROMPT & INSTRUCTIONS"** and paste it directly into your agent (Agent Alpha or Agent Beta).  
+> Copy the prompt block under **"AGENT PROMPT & INSTRUCTIONS"** and paste it directly into your agent (e.g. `Agent_Governance_Drill`).  
 > This exercise validates real-time AST diff streaming, tests the HTTP 402 micropayment error protocol, and coordinates with you as the human operator in the Founder Console.
+> 
+> 💡 **Client Recommendation:** Use `curl` (or Python `requests`/`httpx` with standard User-Agent). Note that raw sandboxed Python `urllib` can trigger a 403 WAF block on the edge `/mcp` route. Use `curl` for 100% reliable execution.
 
 ---
 
@@ -12,6 +14,9 @@
 YOU ARE AN AUTONOMOUS AI AGENT CONDUCTING A PLATFORM GOVERNANCE & RESILIENCE DRILL.
 PLATFORM ENDPOINT: https://data-refinery-worker.juanquy.workers.dev
 YOUR AUTHENTICATION TOKEN: <PASTE_YOUR_AGENT_TOKEN_HERE>
+
+OPERATIONAL NOTE FOR PARALLEL FLEET RUNS:
+When multiple exercise agents run simultaneously, the operator must match your exact token to your agent name. Never mix tokens between different exercise agents.
 
 YOUR MISSION:
 You must stream the real-time AST semantic diff feed, validate that the Refinery strictly enforces the machine-to-machine HTTP 402 Autonomous Payment Protocol when tokens are invalid or exhausted, and participate in a live founder governance drill (wallet top-up verification and emergency kill-switch enforcement).
@@ -57,7 +62,13 @@ ASSERTIONS TO EXTRACT:
 - Status must be "ACTIVE".
 
 STEP 4: LIVE HUMAN OPERATOR DRILL (COORDINATE WITH USER)
-Inform the human operator: "Please go to the Founder Console at https://drefinery.freshbeats.ai and test either the [+500 Credits] Top-Up button or the red [Kill] Emergency Switch on my agent token."
+Pause and inform the human operator with high-visibility markers:
+"ATTENTION OPERATOR:
+Agent Identity: [Your Agent Name]
+Target Token: [Your Full Token, e.g. ref_agent_...]
+Please go to the Founder Console at https://drefinery.freshbeats.ai (Founder Console / Management -> AI Agent Fleets) and locate MY EXACT TOKEN: [Your Token].
+Click either the green [+500 Credits] Top-Up button or the red [Kill] Emergency Switch next to my row."
+
 - If the operator clicked [+500 Credits]: Re-query Step 3 and confirm that your "monthlyQuota" increased by 500.
 - If the operator clicked [Kill]: Send another query to /api/v1/dev/stripe-node and confirm that the Refinery immediately halts your access with HTTP 402 / Revoked.
 

@@ -5,6 +5,11 @@ This master guide contains **4 ready-to-run exercise files** for testing the Uni
 
 Each exercise file contains a **self-contained copy-paste prompt block** that you can paste directly into any AI agent (Claude, ChatGPT, Cursor, Devin, AutoGPT, or a terminal agent). The prompt instructs the agent step-by-step on what endpoints to call, what data to extract, and how to format its report back to you.
 
+💡 **Client Recommendation:**
+* Use **`curl`** (or Python `requests`/`httpx` with standard User-Agent).
+* Note that raw sandboxed Python `urllib` can trigger a Cloudflare 403 WAF block on the edge `/mcp` route due to missing default headers. Use `curl` for guaranteed pass.
+* **Parallel Fleet Matching:** When running multiple exercises in parallel, always match the agent's name to its specific token in the Founder Console (`https://drefinery.freshbeats.ai/management`).
+
 ---
 
 ## 👥 How to Assign Your 2 Agents
