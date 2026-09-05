@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { MCP_TOOLS } from "@data-refinery/schema";
-import { Env } from "../types";
+import type { Env } from "../types";
 import { getLatestEntity } from "../lib/db";
 import { queryVectors } from "../lib/vector";
 import { fetchWebpageContent, extractStructuredData } from "../lib/extractor";

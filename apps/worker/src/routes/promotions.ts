@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { Env } from "../types";
+import type { Env } from "../types";
 import { listRecentDiffs, listEntitiesByDomain } from "../lib/db";
 
 export const promotionRouter = new Hono<{ Bindings: Env }>();

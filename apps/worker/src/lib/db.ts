@@ -1,4 +1,4 @@
-import { Env } from "../types";
+import type { Env } from "../types";
 import { computeEntityDiff } from "./differ";
 import { indexEntityVector } from "./vector";
 

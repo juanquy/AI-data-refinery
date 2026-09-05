@@ -6,7 +6,8 @@
   "types": "./src/index.ts",
   "license": "BUSL-1.1",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@data-refinery/schema": "*"

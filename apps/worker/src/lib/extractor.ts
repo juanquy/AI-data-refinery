@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Env } from "../types";
+import type { Env } from "../types";
 
 /**
  * Clean raw HTML into dense, token-efficient text/markdown

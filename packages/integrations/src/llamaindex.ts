@@ -2,7 +2,7 @@
  * LlamaIndex Official Readers for Universal Data Refinery
  */
 
-import { DataRefineryClient, RefineryClientConfig } from "./langchain";
+import { DataRefineryClient, type RefineryClientConfig } from "./langchain";
 
 export interface LlamaIndexDocument {
   text: string;

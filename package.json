@@ -13,7 +13,8 @@
     "dev:all": "concurrently \"npm run dev:worker\" \"npm run dev:web\"",
     "dev:worker": "npm run dev --workspace=apps/worker",
     "build": "npm run build --workspaces",
-    "test": "npm run test --workspace=apps/worker"
+    "test": "npm run test --workspace=apps/worker",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "keywords": [
     "cloudflare-workers",

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { Env } from "./types";
+import type { Env } from "./types";
 import { devRouter } from "./routes/dev";
 import { pricingRouter } from "./routes/pricing";
 import { regulatoryRouter } from "./routes/regulatory";

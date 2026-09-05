@@ -11,6 +11,8 @@ build/
 # Cloudflare Wrangler
 .wrangler/
 .mf/
+.dev.vars
+.dev.vars.*
 
 # Environment and Local Configs
 .env

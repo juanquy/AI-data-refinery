@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { Env } from "../types";
+import type { Env } from "../types";
 import { queryVectors } from "../lib/vector";
 
 export const searchRouter = new Hono<{ Bindings: Env }>();

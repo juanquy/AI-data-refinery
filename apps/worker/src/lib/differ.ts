@@ -1,4 +1,4 @@
-import { EntityDiff } from "@data-refinery/schema";
+import type { EntityDiff } from "@data-refinery/schema";
 
 /**
  * Computes semantic diff between previous structured data and current structured data
