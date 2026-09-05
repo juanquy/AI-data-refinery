@@ -288,7 +288,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
             </button>
 
             <button
-              onClick={() => onEnterStudio("diffs")}
+              onClick={() => onEnterStudio("playground")}
               className="group relative flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-teal-500 hover:from-orange-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs sm:text-sm shadow-xl shadow-orange-500/20 transition-all transform hover:scale-[1.02] cursor-pointer"
             >
               <span>Launch Studio</span>
@@ -315,7 +315,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
         {/* Hero Logo Type & 3D Typography */}
         <div className="space-y-4 max-w-4xl">
           <div className="flex justify-center mb-8">
-            <div className="relative group cursor-pointer" onClick={() => onEnterStudio("diffs")}>
+            <div className="relative group cursor-pointer" onClick={() => onEnterStudio("playground")}>
               {/* Massive Ambient Energy Halo */}
               <div className="absolute -inset-10 bg-gradient-to-r from-orange-500/40 via-amber-500/30 to-cyan-500/40 rounded-full blur-3xl opacity-70 group-hover:opacity-100 transition-all duration-700 animate-pulse"></div>
               
@@ -371,7 +371,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
         {/* Hero Interactive Launch CTA Group */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md">
           <button
-            onClick={() => onEnterStudio("diffs")}
+            onClick={() => onEnterStudio("playground")}
             className="w-full sm:w-auto relative group overflow-hidden px-8 py-4 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-teal-500 hover:from-orange-400 hover:to-teal-400 text-slate-950 font-black text-base shadow-2xl shadow-orange-500/30 transition-all transform hover:scale-105 cursor-pointer flex items-center justify-center gap-2"
           >
             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>
@@ -730,7 +730,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterStudio }) => {
             <span>Universal Data Refinery • Edge Machine Fuel for AI Agents</span>
           </div>
           <div className="flex items-center gap-6">
-            <button onClick={() => onEnterStudio("diffs")} className="hover:text-slate-300">Studio Dashboard</button>
+            <button onClick={() => onEnterStudio("playground")} className="hover:text-slate-300">Studio Dashboard</button>
             <button onClick={() => onEnterStudio("schemas")} className="hover:text-slate-300">Schema Studio</button>
             <button onClick={() => onEnterStudio("mcp")} className="hover:text-slate-300">MCP Protocol</button>
             <button onClick={() => onEnterStudio("billing")} className="hover:text-slate-300">Stripe Billing</button>

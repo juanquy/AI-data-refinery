@@ -164,7 +164,18 @@ export default function App() {
     return "landing";
   });
 
-  const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "schemas" | "marketplace" | "export" | "playground" | "mcp" | "help" | "billing" | "marketing" | "management">("diffs");
+  const [activeTab, setActiveTab] = useState<"diffs" | "dev" | "pricing" | "regulatory" | "schemas" | "marketplace" | "export" | "playground" | "mcp" | "help" | "billing" | "marketing" | "management">(() => {
+    if (typeof window !== "undefined" && window.location.hash.startsWith("#tab-")) {
+      const tab = window.location.hash.replace("#tab-", "");
+      if (tab === "diffs" || tab === "dev" || tab === "pricing" || tab === "regulatory") {
+        return "management";
+      }
+      if (["schemas", "marketplace", "export", "playground", "mcp", "help", "billing", "marketing", "management"].includes(tab)) {
+        return tab as any;
+      }
+    }
+    return "playground";
+  });
   const [loading, setLoading] = useState(false);
   const [diffs, setDiffs] = useState<DiffItem[]>([]);
   const [devItems, setDevItems] = useState<RefinedEntity[]>([]);
@@ -931,7 +942,7 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     setFounderPasscode("");
     setIsAdminUnlocked(false);
     if (activeTab === "management") {
-      setActiveTab("diffs");
+      setActiveTab("playground");
     }
   };
 
@@ -998,7 +1009,21 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
   const [humanUsers, setHumanUsers] = useState<any[]>([]);
   const [agentFleets, setAgentFleets] = useState<any[]>([]);
   const [agentAuditLogs, setAgentAuditLogs] = useState<any[]>([]);
-  const [founderSubTab, setFounderSubTab] = useState<"telemetry" | "humans" | "agents" | "pricing" | "logs" | "pipelines">("telemetry");
+  const [founderSubTab, setFounderSubTab] = useState<"telemetry" | "alerts" | "verticals" | "humans" | "agents" | "pricing" | "logs" | "pipelines">(() => {
+    if (typeof window !== "undefined" && window.location.hash.startsWith("#tab-")) {
+      const tab = window.location.hash.replace("#tab-", "");
+      if (tab === "diffs") return "alerts";
+      if (["dev", "pricing", "regulatory"].includes(tab)) return "verticals";
+    }
+    return "telemetry";
+  });
+  const [founderVerticalSubTab, setFounderVerticalSubTab] = useState<"dev" | "pricing" | "regulatory">(() => {
+    if (typeof window !== "undefined" && window.location.hash.startsWith("#tab-")) {
+      const tab = window.location.hash.replace("#tab-", "");
+      if (tab === "dev" || tab === "pricing" || tab === "regulatory") return tab as any;
+    }
+    return "dev";
+  });
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editPlanPrice, setEditPlanPrice] = useState<number>(49);
   const [editPlanQuota, setEditPlanQuota] = useState<number>(10000);
@@ -1249,7 +1274,28 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
     return (
       <LandingPage
         onEnterStudio={(tab) => {
-          if (tab) setActiveTab(tab as any);
+          if (tab === "diffs") {
+            if (!isAdminUnlocked) {
+              setActiveTab("playground");
+              setAdminModalOpen(true);
+            } else {
+              setActiveTab("management");
+              setFounderSubTab("alerts");
+            }
+          } else if (tab === "dev" || tab === "pricing" || tab === "regulatory") {
+            if (!isAdminUnlocked) {
+              setActiveTab("playground");
+              setAdminModalOpen(true);
+            } else {
+              setActiveTab("management");
+              setFounderSubTab("verticals");
+              setFounderVerticalSubTab(tab);
+            }
+          } else if (tab) {
+            setActiveTab(tab as any);
+          } else {
+            setActiveTab("playground");
+          }
           setCurrentView("studio");
           window.location.hash = tab ? `tab-${tab}` : "studio";
         }}
@@ -1378,54 +1424,118 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
         
         {/* Metric Badges Banner */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="bg-[#0f172a]/70 border border-slate-800 rounded-xl p-3.5 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
+          <div
+            onClick={() => {
+              if (!isAdminUnlocked) {
+                setAdminModalOpen(true);
+              } else {
+                setActiveTab("management");
+                setFounderSubTab("alerts");
+              }
+            }}
+            className="bg-[#0f172a]/70 border border-slate-800 hover:border-orange-500/50 rounded-xl p-3.5 flex items-center gap-3 cursor-pointer transition-all hover:bg-slate-900/80 group"
+            title="Inspect Semantic Diffs & Live Alerts"
+          >
+            <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400 group-hover:bg-orange-500/20 transition-colors">
               <Activity className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-medium text-slate-400">Semantic Diffs</div>
-              <div className="text-xl font-bold text-white">{diffs.length || stats.recentDiffs}</div>
+              <div className="text-xs font-medium text-slate-400 group-hover:text-slate-300">Semantic Diffs</div>
+              <div className="text-xl font-bold text-white flex items-center gap-1.5">
+                {diffs.length || stats.recentDiffs}
+                <span className="text-[10px] font-normal text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+              </div>
             </div>
           </div>
 
-          <div className="bg-[#0f172a]/70 border border-slate-800 rounded-xl p-3.5 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+          <div
+            onClick={() => {
+              if (!isAdminUnlocked) {
+                setAdminModalOpen(true);
+              } else {
+                setActiveTab("management");
+                setFounderSubTab("verticals");
+                setFounderVerticalSubTab("dev");
+              }
+            }}
+            className="bg-[#0f172a]/70 border border-slate-800 hover:border-blue-500/50 rounded-xl p-3.5 flex items-center gap-3 cursor-pointer transition-all hover:bg-slate-900/80 group"
+            title="Inspect Developer AST Breaking Changes"
+          >
+            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors">
               <Code2 className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-medium text-slate-400">Dev Packages</div>
-              <div className="text-xl font-bold text-white">{devItems.length || stats.developer}</div>
+              <div className="text-xs font-medium text-slate-400 group-hover:text-slate-300">Dev Packages</div>
+              <div className="text-xl font-bold text-white flex items-center gap-1.5">
+                {devItems.length || stats.developer}
+                <span className="text-[10px] font-normal text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+              </div>
             </div>
           </div>
 
-          <div className="bg-[#0f172a]/70 border border-slate-800 rounded-xl p-3.5 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+          <div
+            onClick={() => {
+              if (!isAdminUnlocked) {
+                setAdminModalOpen(true);
+              } else {
+                setActiveTab("management");
+                setFounderSubTab("verticals");
+                setFounderVerticalSubTab("pricing");
+              }
+            }}
+            className="bg-[#0f172a]/70 border border-slate-800 hover:border-emerald-500/50 rounded-xl p-3.5 flex items-center gap-3 cursor-pointer transition-all hover:bg-slate-900/80 group"
+            title="Inspect B2B SaaS Pricing Matrices"
+          >
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
               <DollarSign className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-medium text-slate-400">Pricing Matrices</div>
-              <div className="text-xl font-bold text-white">{pricingItems.length || stats.pricing}</div>
+              <div className="text-xs font-medium text-slate-400 group-hover:text-slate-300">Pricing Matrices</div>
+              <div className="text-xl font-bold text-white flex items-center gap-1.5">
+                {pricingItems.length || stats.pricing}
+                <span className="text-[10px] font-normal text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+              </div>
             </div>
           </div>
 
-          <div className="bg-[#0f172a]/70 border border-slate-800 rounded-xl p-3.5 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
+          <div
+            onClick={() => {
+              if (!isAdminUnlocked) {
+                setAdminModalOpen(true);
+              } else {
+                setActiveTab("management");
+                setFounderSubTab("verticals");
+                setFounderVerticalSubTab("regulatory");
+              }
+            }}
+            className="bg-[#0f172a]/70 border border-slate-800 hover:border-purple-500/50 rounded-xl p-3.5 flex items-center gap-3 cursor-pointer transition-all hover:bg-slate-900/80 group"
+            title="Inspect Municipal Regulations & Permits"
+          >
+            <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20 transition-colors">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-medium text-slate-400">Regulations & Permits</div>
-              <div className="text-xl font-bold text-white">{regulatoryItems.length || stats.regulatory}</div>
+              <div className="text-xs font-medium text-slate-400 group-hover:text-slate-300">Regulations & Permits</div>
+              <div className="text-xl font-bold text-white flex items-center gap-1.5">
+                {regulatoryItems.length || stats.regulatory}
+                <span className="text-[10px] font-normal text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+              </div>
             </div>
           </div>
 
-          <div className="col-span-2 md:col-span-1 bg-[#0f172a]/70 border border-slate-800 rounded-xl p-3.5 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400">
+          <div
+            onClick={() => setActiveTab("mcp")}
+            className="col-span-2 md:col-span-1 bg-[#0f172a]/70 border border-slate-800 hover:border-amber-500/50 rounded-xl p-3.5 flex items-center gap-3 cursor-pointer transition-all hover:bg-slate-900/80 group"
+            title="Open Model Context Protocol Hub"
+          >
+            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20 transition-colors">
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-medium text-slate-400">MCP Protocol</div>
+              <div className="text-xs font-medium text-slate-400 group-hover:text-slate-300">MCP Protocol</div>
               <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
                 Ready (JSON-RPC)
+                <span className="text-[10px] font-normal text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity ml-1">Tools →</span>
               </div>
             </div>
           </div>
@@ -1483,60 +1593,20 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
 
         {/* Tab Navigation Menu */}
         <div className="flex items-center gap-2 overflow-x-auto pb-3 border-b border-slate-800/80 scroll-smooth">
-          {/* PUBLIC CLIENT TABS */}
-          {/* Group 1: Intelligence Feeds */}
+          {/* Group 1: Core Refinery Studio */}
           <div className="flex items-center gap-1.5 bg-slate-950/70 p-1 rounded-xl border border-slate-800/80">
             <button
-              onClick={() => setActiveTab("diffs")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === "diffs"
-                  ? "bg-orange-600 text-white shadow-md shadow-orange-600/20"
+              onClick={() => setActiveTab("playground")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "playground"
+                  ? "bg-amber-600 text-white shadow-md shadow-amber-600/20"
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
               }`}
             >
-              <Activity className="w-3.5 h-3.5" />
-              Live Alerts
+              <Globe className="w-3.5 h-3.5" />
+              🌐 URL Refiner
             </button>
 
-            <button
-              onClick={() => setActiveTab("dev")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === "dev"
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-              }`}
-            >
-              <Code2 className="w-3.5 h-3.5" />
-              1. AST Diffs
-            </button>
-
-            <button
-              onClick={() => setActiveTab("pricing")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === "pricing"
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-              }`}
-            >
-              <DollarSign className="w-3.5 h-3.5" />
-              2. SaaS Pricing Intel
-            </button>
-
-            <button
-              onClick={() => setActiveTab("regulatory")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === "regulatory"
-                  ? "bg-purple-600 text-white shadow-md shadow-purple-600/20"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5" />
-              3. Municipal Rules
-            </button>
-          </div>
-
-          {/* Group 2: Studio & Builders */}
-          <div className="flex items-center gap-1.5 bg-slate-950/70 p-1 rounded-xl border border-slate-800/80">
             <button
               onClick={() => setActiveTab("schemas")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
@@ -1546,7 +1616,7 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
               }`}
             >
               <Sliders className="w-3.5 h-3.5" />
-              🎨 4. Schema Studio
+              🎨 Schema Studio
             </button>
 
             <button
@@ -1558,7 +1628,7 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
               }`}
             >
               <ShoppingBag className="w-3.5 h-3.5" />
-              🛒 5. Marketplace
+              🛒 Marketplace
             </button>
 
             <button
@@ -1570,23 +1640,11 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
               }`}
             >
               <Download className="w-3.5 h-3.5" />
-              📦 6. Fine-Tuning Exporter
-            </button>
-
-            <button
-              onClick={() => setActiveTab("playground")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === "playground"
-                  ? "bg-amber-600 text-white shadow-md shadow-amber-600/20"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5" />
-              URL Refiner
+              📦 Fine-Tuning Exporter
             </button>
           </div>
 
-          {/* Group 3: Connection, Docs & Pricing */}
+          {/* Group 2: Connection, Docs & Pricing */}
           <div className="flex items-center gap-1.5 bg-slate-950/70 p-1 rounded-xl border border-slate-800/80">
             <button
               onClick={() => setActiveTab("mcp")}
@@ -1597,7 +1655,7 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
               }`}
             >
               <Terminal className="w-3.5 h-3.5" />
-              Agent MCP
+              🔌 Agent MCP
             </button>
 
             <button
@@ -1643,443 +1701,41 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
           )}
         </div>
 
-        {/* TAB 1: DIFFS & ALERTS */}
-        {activeTab === "diffs" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-orange-400" />
-                  Semantic Diffs & High-Priority Change Alerts
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Autonomous change detection calculated whenever new version snapshots are refined.
-                </p>
-              </div>
+        {/* REDIRECT / PROMPT FOR CONSOLIDATED FOUNDER TABS */}
+        {(activeTab === "diffs" || activeTab === "dev" || activeTab === "pricing" || activeTab === "regulatory") && (
+          <div className="bg-[#0f172a] border border-amber-500/30 rounded-2xl p-8 text-center space-y-4 max-w-xl mx-auto my-12 shadow-2xl">
+            <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl w-fit mx-auto border border-amber-500/20">
+              <ShieldAlert className="w-8 h-8" />
             </div>
-
-            <div className="grid gap-4">
-              {diffs.map((diff) => (
-                <div
-                  key={diff.id}
-                  className="bg-[#0f172a] border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-all space-y-3"
-                >
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-md tracking-wider ${
-                          diff.severity === "CRITICAL"
-                            ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                            : diff.severity === "MAJOR"
-                            ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
-                            : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                        }`}
-                      >
-                        {diff.severity} SEVERITY
-                      </span>
-                      <span className="font-mono text-sm font-bold text-white">
-                        {diff.entityKey}
-                      </span>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                        {diff.domain}
-                      </span>
-                    </div>
-                    <span className="text-xs text-slate-500 font-mono">
-                      {new Date(diff.detectedAt).toLocaleString()}
-                    </span>
-                  </div>
-
-                  <p className="text-sm text-slate-200">{diff.diffSummary}</p>
-
-                  {/* Changes List & Action Buttons */}
-                  <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
-                    <button
-                      onClick={() => setSelectedDiffModal(diff)}
-                      className="px-3.5 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      Inspect Visual Side-by-Side Diff & Timeline
-                    </button>
-                    <span className="text-[11px] text-slate-500 font-mono">AST Delta Analysis Active</span>
-                  </div>
-
-                  {Array.isArray(diff.changes) && diff.changes.length > 0 && (
-                    <div className="bg-slate-950/60 rounded-lg p-3 border border-slate-800/80 space-y-2">
-                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        Detected Entity Modifications
-                      </div>
-                      <div className="grid gap-1.5 text-xs">
-                        {diff.changes.map((c: any, idx: number) => (
-                          <div key={idx} className="flex items-start gap-2 text-slate-300">
-                            <span className="text-orange-400 font-mono font-bold">•</span>
-                            <div>
-                              <span className="font-mono text-slate-400 mr-2">[{c.field}]</span>
-                              <span>{c.significance || c.changeType}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {diffs.length === 0 && (
-                <div className="bg-[#0f172a] border border-slate-800 rounded-xl p-8 text-center text-slate-400 text-sm">
-                  No diffs recorded yet. Trigger a second refinement of an existing entity to see semantic delta calculations!
-                </div>
-              )}
-            </div>
-
-            {/* VISUAL DIFF & TIME-TRAVEL TIMELINE MODAL */}
-            {selectedDiffModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                <div className="bg-[#0b1120] border border-slate-700 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                  {/* Modal Header */}
-                  <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-                    <div className="flex items-center gap-3">
-                      <Clock className="w-5 h-5 text-orange-400" />
-                      <div>
-                        <div className="text-sm font-bold text-white flex items-center gap-2">
-                          Visual Semantic Diff Inspector: <span className="font-mono text-orange-400">{selectedDiffModal.entityKey}</span>
-                        </div>
-                        <div className="text-[11px] text-slate-400">
-                          Domain: {selectedDiffModal.domain} • Severity: {selectedDiffModal.severity}
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setSelectedDiffModal(null)}
-                      className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors cursor-pointer"
-                    >
-                      ✕ Close
-                    </button>
-                  </div>
-
-                  {/* Time-Travel Version Evolution Bar */}
-                  <div className="px-6 py-3 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between text-xs text-slate-300 flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] uppercase font-bold text-slate-400">Time-Travel Version Snapshot:</span>
-                      <span className="px-2.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-amber-300">Previous Version Snapshot</span>
-                      <span className="text-slate-500 font-mono">➔</span>
-                      <span className="px-2.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/50 font-mono text-emerald-400">Current Refined Snapshot (Latest)</span>
-                    </div>
-                    <span className="text-[11px] text-slate-500 font-mono">{new Date(selectedDiffModal.detectedAt).toLocaleString()}</span>
-                  </div>
-
-                  {/* Side-by-Side Comparison Panes */}
-                  <div className="p-6 overflow-y-auto flex-1 grid md:grid-cols-2 gap-4 font-mono text-xs">
-                    {/* Left: Previous Version Snapshot (Red Highlights) */}
-                    <div className="bg-slate-950 border border-red-500/20 rounded-xl p-4 space-y-3">
-                      <div className="flex items-center justify-between pb-2 border-b border-red-500/20">
-                        <span className="text-red-400 font-bold uppercase text-[11px] flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-red-400"></span> Previous Snapshot (Deprecated / Removed)
-                        </span>
-                        <span className="text-[10px] text-slate-500">Baseline</span>
-                      </div>
-                      <div className="p-3 bg-red-950/20 border border-red-900/30 rounded-lg text-red-200/90 leading-relaxed text-[11px]">
-                        <div className="font-semibold text-red-300 mb-1">--- Removed / Deprecated AST Structures ---</div>
-                        {selectedDiffModal.changes?.map((c: any, i: number) => (
-                          <div key={i} className="py-0.5">
-                            - [{c.field}]: {typeof c.oldValue === "object" ? JSON.stringify(c.oldValue) : (c.oldValue || c.significance || "Previous signature")}
-                          </div>
-                        )) || <div>- Legacy API parameters and signature schema</div>}
-                      </div>
-                    </div>
-
-                    {/* Right: Current Version Snapshot (Green Highlights) */}
-                    <div className="bg-slate-950 border border-emerald-500/20 rounded-xl p-4 space-y-3">
-                      <div className="flex items-center justify-between pb-2 border-b border-emerald-500/20">
-                        <span className="text-emerald-400 font-bold uppercase text-[11px] flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400"></span> Current Snapshot (Added / Upgraded)
-                        </span>
-                        <span className="text-[10px] text-emerald-400">Active</span>
-                      </div>
-                      <div className="p-3 bg-emerald-950/20 border border-emerald-900/30 rounded-lg text-emerald-200/90 leading-relaxed text-[11px]">
-                        <div className="font-semibold text-emerald-300 mb-1">+++ Upgraded / Added Semantic Delta +++</div>
-                        {selectedDiffModal.changes?.map((c: any, i: number) => (
-                          <div key={i} className="py-0.5">
-                            + [{c.field}]: {typeof c.newValue === "object" ? JSON.stringify(c.newValue) : (c.newValue || c.significance || "Upgraded signature")}
-                          </div>
-                        )) || <div>+ Verified machine-executable parameters and migration diffs</div>}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Summary Footer */}
-                  <div className="px-6 py-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between flex-wrap gap-2 text-xs">
-                    <p className="text-slate-300 font-sans text-xs">
-                      <strong className="text-white">AI Executive Diff Summary:</strong> {selectedDiffModal.diffSummary}
-                    </p>
-                    <button
-                      onClick={() => setSelectedDiffModal(null)}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 text-slate-950 font-bold text-xs cursor-pointer"
-                    >
-                      Done Inspecting
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 2: DEVELOPER BREAKING CHANGES */}
-        {activeTab === "dev" && (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Code2 className="w-4 h-4 text-blue-400" />
-                Developer API & SDK Breaking Changes Refinery
-              </h2>
-              <p className="text-xs text-slate-400">
-                Machine-actionable breaking change signatures, deprecations, and code migration diffs.
-              </p>
-            </div>
-
-            <div className="grid gap-6">
-              {devItems.map((item) => {
-                const data = item.structuredData;
-                return (
-                  <div key={item.id} className="bg-[#0f172a] border border-slate-800 rounded-xl p-6 space-y-4">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-bold font-mono text-white">{data.packageOrServiceName}</h3>
-                          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                            v{data.version}
-                          </span>
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                            {data.ecosystem}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1">{item.summary}</p>
-                      </div>
-
-                      {data.hasBreakingChanges && (
-                        <span className="text-xs font-bold px-3 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 flex items-center gap-1.5">
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          Breaking Changes Present
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Breaking Changes List */}
-                    {data.breakingChanges && data.breakingChanges.length > 0 && (
-                      <div className="space-y-3">
-                        <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                          Breaking API Signatures & Migration Rules
-                        </div>
-                        {data.breakingChanges.map((bc: any, idx: number) => (
-                          <div key={idx} className="bg-slate-950/70 border border-slate-800 rounded-lg p-4 space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="font-mono text-sm font-bold text-orange-300">
-                                {bc.symbolName}
-                              </span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-300">
-                                {bc.type}
-                              </span>
-                            </div>
-                            <p className="text-xs text-slate-300">{bc.description}</p>
-                            <div className="text-xs text-emerald-400 bg-emerald-950/20 border border-emerald-800/30 p-2.5 rounded">
-                              <strong className="font-semibold">Migration Guide:</strong> {bc.migrationGuide}
-                            </div>
-
-                            {(bc.beforeCodeSnippet || bc.afterCodeSnippet) && (
-                              <div className="grid md:grid-cols-2 gap-3 text-xs pt-1">
-                                {bc.beforeCodeSnippet && (
-                                  <div className="bg-red-950/20 border border-red-900/40 rounded p-3">
-                                    <div className="text-[10px] font-bold text-red-400 mb-1">PREVIOUS (DEPRECATED)</div>
-                                    <pre className="text-red-200 overflow-x-auto">{bc.beforeCodeSnippet}</pre>
-                                  </div>
-                                )}
-                                {bc.afterCodeSnippet && (
-                                  <div className="bg-emerald-950/20 border border-emerald-900/40 rounded p-3">
-                                    <div className="text-[10px] font-bold text-emerald-400 mb-1">REFINED REPLACEMENT</div>
-                                    <pre className="text-emerald-200 overflow-x-auto">{bc.afterCodeSnippet}</pre>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: B2B PRICING */}
-        {activeTab === "pricing" && (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-emerald-400" />
-                B2B SaaS, API & Cloud Pricing Matrix Refinery
-              </h2>
-              <p className="text-xs text-slate-400">
-                Normalized pricing vectors, usage thresholds, hidden caveats, and cost overage calculators.
-              </p>
-            </div>
-
-            <div className="grid gap-6">
-              {pricingItems.map((item) => {
-                const data = item.structuredData;
-                return (
-                  <div key={item.id} className="bg-[#0f172a] border border-slate-800 rounded-xl p-6 space-y-5">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-bold text-white">{data.companyOrProductName}</h3>
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                            {data.category}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1">{item.summary}</p>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {data.freeTierAvailable && (
-                          <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            Free Tier Available
-                          </span>
-                        )}
-                        {data.estimatedEntryCostMonthly !== null && (
-                          <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-slate-800 text-slate-200">
-                            Entry: ${data.estimatedEntryCostMonthly}/mo
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Tiers Grid */}
-                    <div className="grid md:grid-cols-3 gap-4">
-                      {data.tiers?.map((tier: any, idx: number) => (
-                        <div key={idx} className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
-                          <div>
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-white">{tier.name}</span>
-                              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                                {tier.pricingModel}
-                              </span>
-                            </div>
-
-                            <div className="mt-3 mb-2">
-                              <span className="text-2xl font-black text-white">
-                                {tier.monthlyPrice === null ? "Custom" : `$${tier.monthlyPrice}`}
-                              </span>
-                              {tier.monthlyPrice !== null && (
-                                <span className="text-xs text-slate-400 font-medium"> / mo</span>
-                              )}
-                            </div>
-
-                            {/* Features */}
-                            <div className="space-y-1.5 pt-2">
-                              {tier.features?.map((f: string, fIdx: number) => (
-                                <div key={fIdx} className="flex items-center gap-2 text-xs text-slate-300">
-                                  <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                                  <span>{f}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Hidden conditions / caveats */}
-                          {tier.hiddenConditions && tier.hiddenConditions.length > 0 && (
-                            <div className="bg-amber-950/20 border border-amber-900/30 rounded p-2 text-[11px] text-amber-300 mt-3">
-                              <strong>Caveat:</strong> {tier.hiddenConditions.join(", ")}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: REGULATORY */}
-        {activeTab === "regulatory" && (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-purple-400" />
-                Localized Regulatory & Compliance Intelligence Refinery
-              </h2>
-              <p className="text-xs text-slate-400">
-                Municipal ordinances, zoning laws, permit requirements, and grant eligibility matrices.
-              </p>
-            </div>
-
-            <div className="grid gap-6">
-              {regulatoryItems.map((item) => {
-                const data = item.structuredData;
-                return (
-                  <div key={item.id} className="bg-[#0f172a] border border-slate-800 rounded-xl p-6 space-y-4">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-bold text-white">{data.topic}</h3>
-                          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                            {data.jurisdiction}
-                          </span>
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                            {data.level}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1">{item.summary}</p>
-                      </div>
-
-                      <span className="text-xs text-slate-500 font-mono">
-                        Governing Body: {data.governingBody}
-                      </span>
-                    </div>
-
-                    {/* Requirements */}
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {data.requirements?.map((req: any, idx: number) => (
-                        <div key={idx} className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-2.5">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-sm text-slate-200">{req.title}</span>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                              {req.category}
-                            </span>
-                          </div>
-
-                          {req.estimatedCostOrFee && (
-                            <div className="text-xs text-amber-400 font-semibold">
-                              Fee: {req.estimatedCostOrFee}
-                            </div>
-                          )}
-
-                          {req.penaltyForNonCompliance && (
-                            <div className="text-xs text-red-400 bg-red-950/20 border border-red-900/30 p-2 rounded">
-                              <strong>Penalty:</strong> {req.penaltyForNonCompliance}
-                            </div>
-                          )}
-
-                          {req.stepByStepAction && (
-                            <div className="space-y-1 text-xs text-slate-300 pt-1">
-                              <div className="font-semibold text-slate-400">Action Steps:</div>
-                              {req.stepByStepAction.map((step: string, sIdx: number) => (
-                                <div key={sIdx} className="flex items-start gap-2">
-                                  <span className="text-purple-400 font-bold">{sIdx + 1}.</span>
-                                  <span>{step}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+            <h3 className="text-base font-bold text-white">Consolidated to Founder Console</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Live change alerts, developer AST diffs, SaaS pricing matrices, and municipal compliance intelligence have been moved to the secure Founder Console telemetry stream.
+            </p>
+            <div className="pt-2 flex justify-center gap-3">
+              <button
+                onClick={() => {
+                  if (!isAdminUnlocked) {
+                    setAdminModalOpen(true);
+                  } else {
+                    setActiveTab("management");
+                    if (activeTab === "diffs") {
+                      setFounderSubTab("alerts");
+                    } else {
+                      setFounderSubTab("verticals");
+                      setFounderVerticalSubTab(activeTab as any);
+                    }
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 cursor-pointer transition-all hover:scale-105"
+              >
+                Access Founder Console
+              </button>
+              <button
+                onClick={() => setActiveTab("playground")}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer transition-all"
+              >
+                Go to URL Refiner
+              </button>
             </div>
           </div>
         )}
@@ -3997,15 +3653,27 @@ const docs = await reader.loadData({
               </button>
 
               <button
-                onClick={() => setFounderSubTab("humans")}
+                onClick={() => setFounderSubTab("alerts")}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                  founderSubTab === "humans"
-                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                  founderSubTab === "alerts"
+                    ? "bg-orange-600 text-white shadow-md shadow-orange-600/20"
                     : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                 }`}
               >
-                <Users className="w-3.5 h-3.5 text-emerald-400" />
-                👥 Human Customers ({humanUsers.length})
+                <Activity className="w-3.5 h-3.5 text-orange-400" />
+                🚨 Live Alerts & Diffs ({diffs.length})
+              </button>
+
+              <button
+                onClick={() => setFounderSubTab("verticals")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  founderSubTab === "verticals"
+                    ? "bg-purple-600 text-white shadow-md shadow-purple-600/20"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5 text-purple-400" />
+                ⚡ Monitored Domain Feeds ({devItems.length + pricingItems.length + regulatoryItems.length})
               </button>
 
               <button
@@ -4018,6 +3686,18 @@ const docs = await reader.loadData({
               >
                 <Bot className="w-3.5 h-3.5 text-purple-400" />
                 🤖 AI Agent Fleets ({agentFleets.length})
+              </button>
+
+              <button
+                onClick={() => setFounderSubTab("humans")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  founderSubTab === "humans"
+                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 text-emerald-400" />
+                👥 Human Customers ({humanUsers.length})
               </button>
 
               <button
@@ -4125,6 +3805,406 @@ const docs = await reader.loadData({
                               title={`${item.date}: ${item.queries} queries (${item.latencyMs}ms avg latency)`}
                             ></div>
                             <span className="text-[9px] text-slate-500 font-mono truncate w-full text-center">{item.date}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* SUBTAB: LIVE ALERTS & SEMANTIC DIFFS */}
+            {founderSubTab === "alerts" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-orange-400" />
+                      Semantic Diffs & High-Priority Change Alerts
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Autonomous change detection calculated whenever new version snapshots are refined.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4">
+                  {diffs.map((diff) => (
+                    <div
+                      key={diff.id}
+                      className="bg-[#0f172a] border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-all space-y-3"
+                    >
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-md tracking-wider ${
+                              diff.severity === "CRITICAL"
+                                ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                                : diff.severity === "MAJOR"
+                                ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                                : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                            }`}
+                          >
+                            {diff.severity} SEVERITY
+                          </span>
+                          <span className="font-mono text-sm font-bold text-white">
+                            {diff.entityKey}
+                          </span>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                            {diff.domain}
+                          </span>
+                        </div>
+                        <span className="text-xs text-slate-500 font-mono">
+                          {new Date(diff.detectedAt).toLocaleString()}
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-slate-200">{diff.diffSummary}</p>
+
+                      {/* Changes List & Action Buttons */}
+                      <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
+                        <button
+                          onClick={() => setSelectedDiffModal(diff)}
+                          className="px-3.5 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Inspect Visual Side-by-Side Diff & Timeline
+                        </button>
+                        <span className="text-[11px] text-slate-500 font-mono">AST Delta Analysis Active</span>
+                      </div>
+
+                      {Array.isArray(diff.changes) && diff.changes.length > 0 && (
+                        <div className="bg-slate-950/60 rounded-lg p-3 border border-slate-800/80 space-y-2">
+                          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                            Detected Entity Modifications
+                          </div>
+                          <div className="grid gap-1.5 text-xs">
+                            {diff.changes.map((c: any, idx: number) => (
+                              <div key={idx} className="flex items-start gap-2 text-slate-300">
+                                <span className="text-orange-400 font-mono font-bold">•</span>
+                                <div>
+                                  <span className="font-mono text-slate-400 mr-2">[{c.field}]</span>
+                                  <span>{c.significance || c.changeType}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {diffs.length === 0 && (
+                    <div className="bg-[#0f172a] border border-slate-800 rounded-xl p-8 text-center text-slate-400 text-sm">
+                      No diffs recorded yet. Trigger a second refinement of an existing entity to see semantic delta calculations!
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* SUBTAB: MONITORED DOMAIN FEEDS (AST DIFFS, SAAS PRICING, MUNICIPAL RULES) */}
+            {founderSubTab === "verticals" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between flex-wrap gap-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-purple-400" />
+                      Pre-Monitored Industry Intelligence Feeds
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Continuously audited real-world domains across developer packages, SaaS pricing models, and municipal regulations.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                    <button
+                      onClick={() => setFounderVerticalSubTab("dev")}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                        founderVerticalSubTab === "dev"
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Code AST ({devItems.length})
+                    </button>
+                    <button
+                      onClick={() => setFounderVerticalSubTab("pricing")}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                        founderVerticalSubTab === "pricing"
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      SaaS Pricing ({pricingItems.length})
+                    </button>
+                    <button
+                      onClick={() => setFounderVerticalSubTab("regulatory")}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                        founderVerticalSubTab === "regulatory"
+                          ? "bg-purple-600 text-white shadow-sm"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Municipal Rules ({regulatoryItems.length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Developer AST View */}
+                {founderVerticalSubTab === "dev" && (
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Code2 className="w-4 h-4 text-blue-400" />
+                        Developer API & SDK Breaking Changes Refinery
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        Machine-actionable breaking change signatures, deprecations, and code migration diffs.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-6">
+                      {devItems.map((item) => {
+                        const data = item.structuredData;
+                        return (
+                          <div key={item.id} className="bg-[#0f172a] border border-slate-800 rounded-xl p-6 space-y-4">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div>
+                                <div className="flex items-center gap-3">
+                                  <h3 className="text-lg font-bold font-mono text-white">{data.packageOrServiceName}</h3>
+                                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                    v{data.version}
+                                  </span>
+                                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                                    {data.ecosystem}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">{item.summary}</p>
+                              </div>
+
+                              {data.hasBreakingChanges && (
+                                <span className="text-xs font-bold px-3 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 flex items-center gap-1.5">
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                  Breaking Changes Present
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Breaking Changes List */}
+                            {data.breakingChanges && data.breakingChanges.length > 0 && (
+                              <div className="space-y-3">
+                                <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                                  Breaking API Signatures & Migration Rules
+                                </div>
+                                {data.breakingChanges.map((bc: any, idx: number) => (
+                                  <div key={idx} className="bg-slate-950/70 border border-slate-800 rounded-lg p-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-mono text-sm font-bold text-orange-300">
+                                        {bc.symbolName}
+                                      </span>
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-300">
+                                        {bc.type}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-slate-300">{bc.description}</p>
+                                    <div className="text-xs text-emerald-400 bg-emerald-950/20 border border-emerald-800/30 p-2.5 rounded">
+                                      <strong className="font-semibold">Migration Guide:</strong> {bc.migrationGuide}
+                                    </div>
+
+                                    {(bc.beforeCodeSnippet || bc.afterCodeSnippet) && (
+                                      <div className="grid md:grid-cols-2 gap-3 text-xs pt-1">
+                                        {bc.beforeCodeSnippet && (
+                                          <div className="bg-red-950/20 border border-red-900/40 rounded p-3">
+                                            <div className="text-[10px] font-bold text-red-400 mb-1">PREVIOUS (DEPRECATED)</div>
+                                            <pre className="text-red-200 overflow-x-auto">{bc.beforeCodeSnippet}</pre>
+                                          </div>
+                                        )}
+                                        {bc.afterCodeSnippet && (
+                                          <div className="bg-emerald-950/20 border border-emerald-900/40 rounded p-3">
+                                            <div className="text-[10px] font-bold text-emerald-400 mb-1">REFINED REPLACEMENT</div>
+                                            <pre className="text-emerald-200 overflow-x-auto">{bc.afterCodeSnippet}</pre>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* SaaS Pricing View */}
+                {founderVerticalSubTab === "pricing" && (
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-emerald-400" />
+                        B2B SaaS, API & Cloud Pricing Matrix Refinery
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        Normalized pricing vectors, usage thresholds, hidden caveats, and cost overage calculators.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-6">
+                      {pricingItems.map((item) => {
+                        const data = item.structuredData;
+                        return (
+                          <div key={item.id} className="bg-[#0f172a] border border-slate-800 rounded-xl p-6 space-y-5">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div>
+                                <div className="flex items-center gap-3">
+                                  <h3 className="text-lg font-bold text-white">{data.companyOrProductName}</h3>
+                                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                                    {data.category}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">{item.summary}</p>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {data.freeTierAvailable && (
+                                  <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    Free Tier Available
+                                  </span>
+                                )}
+                                {data.estimatedEntryCostMonthly !== null && (
+                                  <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-slate-800 text-slate-200">
+                                    Entry: ${data.estimatedEntryCostMonthly}/mo
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Tiers Grid */}
+                            <div className="grid md:grid-cols-3 gap-4">
+                              {data.tiers?.map((tier: any, idx: number) => (
+                                <div key={idx} className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
+                                  <div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-bold text-white">{tier.name}</span>
+                                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                                        {tier.pricingModel}
+                                      </span>
+                                    </div>
+
+                                    <div className="mt-3 mb-2">
+                                      <span className="text-2xl font-black text-white">
+                                        {tier.monthlyPrice === null ? "Custom" : `$${tier.monthlyPrice}`}
+                                      </span>
+                                      {tier.monthlyPrice !== null && (
+                                        <span className="text-xs text-slate-400 font-medium"> / mo</span>
+                                      )}
+                                    </div>
+
+                                    {/* Features */}
+                                    <div className="space-y-1.5 pt-2">
+                                      {tier.features?.map((f: string, fIdx: number) => (
+                                        <div key={fIdx} className="flex items-center gap-2 text-xs text-slate-300">
+                                          <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                                          <span>{f}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Hidden conditions / caveats */}
+                                  {tier.hiddenConditions && tier.hiddenConditions.length > 0 && (
+                                    <div className="bg-amber-950/20 border border-amber-900/30 rounded p-2 text-[11px] text-amber-300 mt-3">
+                                      <strong>Caveat:</strong> {tier.hiddenConditions.join(", ")}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Municipal Rules View */}
+                {founderVerticalSubTab === "regulatory" && (
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-purple-400" />
+                        Localized Regulatory & Compliance Intelligence Refinery
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        Municipal ordinances, zoning laws, permit requirements, and grant eligibility matrices.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-6">
+                      {regulatoryItems.map((item) => {
+                        const data = item.structuredData;
+                        return (
+                          <div key={item.id} className="bg-[#0f172a] border border-slate-800 rounded-xl p-6 space-y-4">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div>
+                                <div className="flex items-center gap-3">
+                                  <h3 className="text-lg font-bold text-white">{data.topic}</h3>
+                                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                                    {data.jurisdiction}
+                                  </span>
+                                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                                    {data.level}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">{item.summary}</p>
+                              </div>
+
+                              <span className="text-xs text-slate-500 font-mono">
+                                Governing Body: {data.governingBody}
+                              </span>
+                            </div>
+
+                            {/* Requirements */}
+                            <div className="grid md:grid-cols-2 gap-4">
+                              {data.requirements?.map((req: any, idx: number) => (
+                                <div key={idx} className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-2.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-bold text-sm text-slate-200">{req.title}</span>
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                                      {req.category}
+                                    </span>
+                                  </div>
+
+                                  {req.estimatedCostOrFee && (
+                                    <div className="text-xs text-amber-400 font-semibold">
+                                      Fee: {req.estimatedCostOrFee}
+                                    </div>
+                                  )}
+
+                                  {req.penaltyForNonCompliance && (
+                                    <div className="text-xs text-red-400 bg-red-950/20 border border-red-900/30 p-2 rounded">
+                                      <strong>Penalty:</strong> {req.penaltyForNonCompliance}
+                                    </div>
+                                  )}
+
+                                  {req.stepByStepAction && (
+                                    <div className="space-y-1 text-xs text-slate-300 pt-1">
+                                      <div className="font-semibold text-slate-400">Action Steps:</div>
+                                      {req.stepByStepAction.map((step: string, sIdx: number) => (
+                                        <div key={sIdx} className="flex items-start gap-2">
+                                          <span className="text-purple-400 font-bold">{sIdx + 1}.</span>
+                                          <span>{step}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         );
                       })}
@@ -4857,6 +4937,97 @@ const docs = await reader.loadData({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* VISUAL DIFF & TIME-TRAVEL TIMELINE MODAL */}
+        {selectedDiffModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <div className="bg-[#0b1120] border border-slate-700 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-orange-400" />
+                  <div>
+                    <div className="text-sm font-bold text-white flex items-center gap-2">
+                      Visual Semantic Diff Inspector: <span className="font-mono text-orange-400">{selectedDiffModal.entityKey}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      Domain: {selectedDiffModal.domain} • Severity: {selectedDiffModal.severity}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedDiffModal(null)}
+                  className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
+
+              {/* Time-Travel Version Evolution Bar */}
+              <div className="px-6 py-3 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between text-xs text-slate-300 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] uppercase font-bold text-slate-400">Time-Travel Version Snapshot:</span>
+                  <span className="px-2.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-amber-300">Previous Version Snapshot</span>
+                  <span className="text-slate-500 font-mono">➔</span>
+                  <span className="px-2.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/50 font-mono text-emerald-400">Current Refined Snapshot (Latest)</span>
+                </div>
+                <span className="text-[11px] text-slate-500 font-mono">{new Date(selectedDiffModal.detectedAt).toLocaleString()}</span>
+              </div>
+
+              {/* Side-by-Side Comparison Panes */}
+              <div className="p-6 overflow-y-auto flex-1 grid md:grid-cols-2 gap-4 font-mono text-xs">
+                {/* Left: Previous Version Snapshot (Red Highlights) */}
+                <div className="bg-slate-950 border border-red-500/20 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-red-500/20">
+                    <span className="text-red-400 font-bold uppercase text-[11px] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-red-400"></span> Previous Snapshot (Deprecated / Removed)
+                    </span>
+                    <span className="text-[10px] text-slate-500">Baseline</span>
+                  </div>
+                  <div className="p-3 bg-red-950/20 border border-red-900/30 rounded-lg text-red-200/90 leading-relaxed text-[11px]">
+                    <div className="font-semibold text-red-300 mb-1">--- Removed / Deprecated AST Structures ---</div>
+                    {selectedDiffModal.changes?.map((c: any, i: number) => (
+                      <div key={i} className="py-0.5">
+                        - [{c.field}]: {typeof c.oldValue === "object" ? JSON.stringify(c.oldValue) : (c.oldValue || c.significance || "Previous signature")}
+                      </div>
+                    )) || <div>- Legacy API parameters and signature schema</div>}
+                  </div>
+                </div>
+
+                {/* Right: Current Version Snapshot (Green Highlights) */}
+                <div className="bg-slate-950 border border-emerald-500/20 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-emerald-500/20">
+                    <span className="text-emerald-400 font-bold uppercase text-[11px] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span> Current Snapshot (Added / Upgraded)
+                    </span>
+                    <span className="text-[10px] text-emerald-400">Active</span>
+                  </div>
+                  <div className="p-3 bg-emerald-950/20 border border-emerald-900/30 rounded-lg text-emerald-200/90 leading-relaxed text-[11px]">
+                    <div className="font-semibold text-emerald-300 mb-1">+++ Upgraded / Added Semantic Delta +++</div>
+                    {selectedDiffModal.changes?.map((c: any, i: number) => (
+                      <div key={i} className="py-0.5">
+                        + [{c.field}]: {typeof c.newValue === "object" ? JSON.stringify(c.newValue) : (c.newValue || c.significance || "Upgraded signature")}
+                      </div>
+                    )) || <div>+ Verified machine-executable parameters and migration diffs</div>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary Footer */}
+              <div className="px-6 py-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between flex-wrap gap-2 text-xs">
+                <p className="text-slate-300 font-sans text-xs">
+                  <strong className="text-white">AI Executive Diff Summary:</strong> {selectedDiffModal.diffSummary}
+                </p>
+                <button
+                  onClick={() => setSelectedDiffModal(null)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 text-slate-950 font-bold text-xs cursor-pointer"
+                >
+                  Done Inspecting
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
