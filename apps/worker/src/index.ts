@@ -137,6 +137,18 @@ app.route("/api/v1/marketplace", marketplaceRouter);
 app.route("/api/v1/enterprise", enterpriseRouter);
 app.route("/mcp", mcpRouter);
 
+// Glama MCP Connector Verification
+app.get("/.well-known/glama.json", (c) => {
+  return c.json({
+    "$schema": "https://glama.ai/mcp/schemas/connector.json",
+    "maintainers": [
+      {
+        "email": "juanquy@gmail.com"
+      }
+    ]
+  });
+});
+
 // Dynamic SVG Badge Generator for GitHub READMEs
 app.get("/badge/:package.svg", async (c) => {
   let version = "Verified";

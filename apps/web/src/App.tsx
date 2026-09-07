@@ -882,14 +882,14 @@ const NICHE_SCHEMA_TEMPLATES: NicheSchemaTemplate[] = [
   const [adminVerifying, setAdminVerifying] = useState(false);
   const [founderPasscode, setFounderPasscode] = useState<string>(() => {
     try {
-      return sessionStorage.getItem("refinery_founder_code") || "Refinery#Founder2026!";
+      return sessionStorage.getItem("refinery_founder_code") || "";
     } catch {
-      return "Refinery#Founder2026!";
+      return "";
     }
   });
 
   const getManagementHeaders = () => {
-    const code = founderPasscode || (typeof sessionStorage !== "undefined" ? sessionStorage.getItem("refinery_founder_code") : null) || "Refinery#Founder2026!";
+    const code = founderPasscode || (typeof sessionStorage !== "undefined" ? sessionStorage.getItem("refinery_founder_code") : null) || "";
     return {
       "Content-Type": "application/json",
       "X-Founder-Passcode": code,
@@ -3226,8 +3226,8 @@ const docs = await reader.loadData({
                     a: "Simply add the single live endpoint URL (https://data-refinery-worker.juanquy.workers.dev/mcp) into your `.cursor/mcp.json` or `claude_desktop_config.json`. Cursor and Claude will automatically discover all 12 native and custom tools."
                   },
                   {
-                    q: "What is the Founder Passcode for Admin access?",
-                    a: "Enter the master passcode `Refinery#Founder2026!` (or quick alias `founder`) in the Admin Console tab to unlock full system observability, background cron pipeline controls, webhook dispatches, and user management."
+                    q: "How do I access the Founder Console for Admin management?",
+                    a: "Authorized operators can enter their secure Founder Passcode or an active Pro API Key in the Founder Console unlock modal to access real-time telemetry, pipeline controls, and fleet governance."
                   },
                   {
                     q: "What latency and uptime guarantees are provided?",
@@ -5061,7 +5061,7 @@ const docs = await reader.loadData({
                   type="password"
                   autoFocus
                   required
-                  placeholder="Enter passcode (e.g. founder) or Pro API key"
+                  placeholder="Enter Founder Passcode or Pro API key"
                   value={adminPasscodeInput}
                   onChange={(e) => setAdminPasscodeInput(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 font-mono"

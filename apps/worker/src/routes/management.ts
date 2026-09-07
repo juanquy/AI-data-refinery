@@ -14,18 +14,15 @@ async function verifyFounderAuth(c: any): Promise<boolean> {
   const clean = token.trim();
   if (!clean) return false;
 
-  // Master founder passcode check
-  if (
-    clean === "Refinery#Founder2026!" ||
-    clean.toLowerCase() === "founder" ||
-    clean.toLowerCase() === "refinery2026"
-  ) {
+  // 1. Check environment secret (configured via wrangler secret put FOUNDER_PASSCODE)
+  const founderSecret = c.env.FOUNDER_PASSCODE?.trim();
+  if (founderSecret && clean === founderSecret) {
     return true;
   }
 
-  // Check admin_users table in D1
+  // 2. Check admin_users table in D1 (ignoring any disabled placeholder hashes)
   const admin = await c.env.DB.prepare(
-    "SELECT id FROM admin_users WHERE passcode_hash = ? AND status = 'ACTIVE' LIMIT 1"
+    "SELECT id FROM admin_users WHERE passcode_hash = ? AND status = 'ACTIVE' AND passcode_hash NOT LIKE 'DISABLED_%' LIMIT 1"
   ).bind(clean).first();
   if (admin) return true;
 
@@ -219,9 +216,20 @@ managementRouter.post("/verify-admin", async (c) => {
     return c.json({ valid: false, error: "Passcode or API Key required" }, 400);
   }
 
-  // 1. Check in admin_users table in D1
+  // 1. Check environment secret (configured via wrangler secret put FOUNDER_PASSCODE)
+  const founderSecret = c.env.FOUNDER_PASSCODE?.trim();
+  if (founderSecret && passcode === founderSecret) {
+    return c.json({
+      valid: true,
+      role: "FOUNDER",
+      displayName: "Lead Founder",
+      email: "founder@freshbeats.ai"
+    });
+  }
+
+  // 2. Check in admin_users table in D1 (ignoring disabled placeholder hashes)
   const adminUser: any = await c.env.DB.prepare(
-    "SELECT id, email, display_name, role FROM admin_users WHERE passcode_hash = ? AND status = 'ACTIVE' LIMIT 1"
+    "SELECT id, email, display_name, role FROM admin_users WHERE passcode_hash = ? AND status = 'ACTIVE' AND passcode_hash NOT LIKE 'DISABLED_%' LIMIT 1"
   ).bind(passcode).first();
 
   if (adminUser) {
@@ -233,16 +241,6 @@ managementRouter.post("/verify-admin", async (c) => {
       role: adminUser.role,
       displayName: adminUser.display_name,
       email: adminUser.email
-    });
-  }
-
-  // 2. Fallback check for active PRO API Key or default founder passcodes
-  if (passcode.toLowerCase() === "founder" || passcode.toLowerCase() === "refinery2026" || passcode === "Refinery#Founder2026!") {
-    return c.json({
-      valid: true,
-      role: "FOUNDER",
-      displayName: "Lead Founder",
-      email: "founder@freshbeats.ai"
     });
   }
 

@@ -8,6 +8,7 @@ export interface Env {
   STRIPE_SECRET_KEY?: string;
   STRIPE_PRO_PRICE_ID?: string;
   STRIPE_WEBHOOK_SECRET?: string;
+  FOUNDER_PASSCODE?: string;
 }
 
 export interface RefineJobResult<T = any> {

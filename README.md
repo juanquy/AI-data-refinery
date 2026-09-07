@@ -9,6 +9,10 @@
   Built on Cloudflare Workers AI, D1 SQL, Vectorize, and the Model Context Protocol (MCP).
 </p>
 
+<p align="center">
+  <a href="https://glama.ai/mcp/servers/juanquy/AI-data-refinery"><img src="https://glama.ai/mcp/servers/juanquy/AI-data-refinery/badges/score.svg" alt="juanquy/AI-data-refinery MCP server" /></a>
+</p>
+
 ---
 
 ## 🌟 Why Data Refinery?

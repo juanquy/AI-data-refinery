@@ -36,7 +36,7 @@ VALUES (
   'founder@freshbeats.ai',
   'Lead Founder',
   'FOUNDER',
-  'Refinery#Founder2026!',
+  'DISABLED_USE_FOUNDER_PASSCODE_SECRET',
   'ACTIVE'
 );
 

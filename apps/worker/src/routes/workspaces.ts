@@ -93,11 +93,12 @@ workspacesRouter.post("/:id/members", async (c) => {
     let userId = user?.id;
     if (!userId) {
       userId = `usr_${crypto.randomUUID()}`;
+      const memberToken = `tok_${crypto.randomUUID()}`;
       await c.env.DB.prepare(
         `INSERT INTO admin_users (id, email, display_name, role, passcode_hash, status, created_at)
-         VALUES (?, ?, ?, 'MEMBER', 'refinery-member-2026', 'ACTIVE', CURRENT_TIMESTAMP)`
+         VALUES (?, ?, ?, 'MEMBER', ?, 'ACTIVE', CURRENT_TIMESTAMP)`
       )
-        .bind(userId, email, displayName)
+        .bind(userId, email, displayName, memberToken)
         .run();
     }
 
