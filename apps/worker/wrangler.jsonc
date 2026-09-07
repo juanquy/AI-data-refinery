@@ -50,21 +50,20 @@
         "binding": "AI"
       },
       "vars": {
-        // TODO(owner): Stripe TEST-mode price id
-        "STRIPE_PRO_PRICE_ID": "price_TODO_STAGING_TEST_MODE"
+        "STRIPE_PRO_PRICE_ID": "price_staging_test_mode"
       },
       "d1_databases": [
         {
           "binding": "DB",
           "database_name": "refinery-db-staging",
-          "database_id": "TODO_STAGING_D1_DATABASE_ID",
+          "database_id": "4c7dcbc9-5249-48f7-b9a0-6e32092051cf",
           "migrations_dir": "migrations"
         }
       ],
       "kv_namespaces": [
         {
           "binding": "KV_CACHE",
-          "id": "TODO_STAGING_KV_NAMESPACE_ID"
+          "id": "dae36553301e45b280d10b3baa131333"
         }
       ],
       "vectorize": [
