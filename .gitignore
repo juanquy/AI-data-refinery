@@ -18,6 +18,9 @@ build/
 .env
 .env.local
 .env.*.local
+credentials.local.md
+*.local.md
+
 
 # Logs
 npm-debug.log*
