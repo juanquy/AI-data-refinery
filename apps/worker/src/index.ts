@@ -141,15 +141,7 @@ app.route("/mcp", mcpRouter);
 app.get("/.well-known/glama.json", (c) => {
   return c.json({
     "$schema": "https://glama.ai/mcp/schemas/connector.json",
-    "claim": [
-      "glama_claim_Jtas1cKRHYRAgUhirQhgB4RBiNeta4RX",
-      "glama_claim_JtaslcKRHYRAgUhirQhgB4RBiNeta4RX"
-    ],
-    "maintainers": [
-      {
-        "email": "juanquy@gmail.com"
-      }
-    ]
+    "claim": "glama_claim_Jtas1cKRHYRAgUhirQhgB4RBiNeta4RX"
   });
 });
 
