@@ -141,6 +141,10 @@ app.route("/mcp", mcpRouter);
 app.get("/.well-known/glama.json", (c) => {
   return c.json({
     "$schema": "https://glama.ai/mcp/schemas/connector.json",
+    "claim": [
+      "glama_claim_Jtas1cKRHYRAgUhirQhgB4RBiNeta4RX",
+      "glama_claim_JtaslcKRHYRAgUhirQhgB4RBiNeta4RX"
+    ],
     "maintainers": [
       {
         "email": "juanquy@gmail.com"
@@ -148,6 +152,12 @@ app.get("/.well-known/glama.json", (c) => {
     ]
   });
 });
+
+app.get("/.well-known/glama-claim", (c) => c.text("glama_claim_Jtas1cKRHYRAgUhirQhgB4RBiNeta4RX"));
+app.get("/.well-known/glama-claim.txt", (c) => c.text("glama_claim_Jtas1cKRHYRAgUhirQhgB4RBiNeta4RX"));
+app.get("/glama-claim", (c) => c.text("glama_claim_Jtas1cKRHYRAgUhirQhgB4RBiNeta4RX"));
+app.get("/glama-claim.txt", (c) => c.text("glama_claim_Jtas1cKRHYRAgUhirQhgB4RBiNeta4RX"));
+
 
 // Dynamic SVG Badge Generator for GitHub READMEs
 app.get("/badge/:package.svg", async (c) => {
